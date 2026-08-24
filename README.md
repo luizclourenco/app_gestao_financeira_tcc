@@ -1,43 +1,40 @@
 # App de Gestão Financeira (TCC)
 
-Repositório do nosso projeto de TCC de Engenharia de Software.
+Repositório  provisório do projeto de Conclusão de Curso (TCC) em Engenharia de Software.
 
-O sistema é um aplicativo de controle financeiro pessoal, com foco no gerenciamento de receitas, despesas e relatórios financeiros. O projeto é desenvolvido com ênfase em uma arquitetura organizada, separação de responsabilidades e utilização de SQL nativo.
+O **Grana em Dia / Meu Controle** é um aplicativo de gestão financeira pessoal desenvolvido para otimizar o controle orçamentário, o acompanhamento de metas e o registro analítico de receitas e despesas. O projeto adota uma arquitetura limpa em camadas, consultas otimizadas com **SQL nativo**, padrões rigorosos de segurança e diretrizes de acessibilidade web.
 
-Para organizar o desenvolvimento e separar as responsabilidades entre as equipes, o repositório é dividido em duas frentes:
+---
 
-- **/backend:** API desenvolvida em Python utilizando FastAPI, com PostgreSQL como banco de dados e acesso ao banco por meio do Psycopg2.
-- **/frontend:** Interface web desenvolvida em HTML, CSS e JavaScript, responsável pela interação com o usuário e pelo consumo dos endpoints disponibilizados pela API. O frontend será hospedado pelo GitHub Pages.
+## 📂 Documentação Completa (Pasta `/docs`)
 
-## Tecnologias Utilizadas
+Para uma avaliação aprofundada de todas as etapas de planejamento, arquitetura e engenharia do sistema, a pasta **`/docs`** deste repositório disponibiliza a documentação integral do projeto, contendo:
+- O **Modelo Conceitual e de Dados (DER)** detalhado.
+- O **Modelo Funcional (YFrame)** estruturado em Entradas, Processamento e Saídas.
+- Os fluxogramas, especificações e wireframes das **6 telas principais** do aplicativo.
 
-### Backend
-- Python
-- FastAPI
-- Psycopg2
-- PostgreSQL
-- SQL
+---
 
-### Frontend
-- HTML5
-- CSS3
-- JavaScript
+## 🏗️ Arquitetura do Sistema
 
-### Infraestrutura
-- GitHub / GitHub Pages
-- Render
-
-## Arquitetura
-
-A aplicação utiliza uma arquitetura baseada na separação entre frontend, API e banco de dados:
+A aplicação separa de forma estrita as responsabilidades entre interface, lógica de negócio e persistência de dados:
 
 ```text
-Frontend (GitHub Pages)
-        ↓
-     HTTP/JSON
-        ↓
-Backend (FastAPI)
-        ↓
-      Psycopg2
-        ↓
-    PostgreSQL
+       ┌─────────────────────────────────────────┐
+       │   Frontend Web (HTML5, CSS3, JS)        │
+       │         [Hospedado no GitHub Pages]     │
+       └────────────────────┬────────────────────┘
+                            │
+                     HTTP / JSON (REST API)
+                            │
+       ┌────────────────────▼────────────────────┐
+       │   Backend API (Python + FastAPI)        │
+       │         [Hospedado no Render]           │
+       └────────────────────┬────────────────────┘
+                            │
+                       Psycopg2 (SQL Nativo)
+                            │
+       ┌────────────────────▼────────────────────┐
+       │   Banco de Dados PostgreSQL             │
+       │         [Hospedado no Neon.tech]        │
+       └─────────────────────────────────────────┘
