@@ -1,0 +1,596 @@
+/* ================================================
+   VARIÁVEIS DE COR
+   Deixamos as cores como "variáveis" (--nome) pra não
+   ficar repetindo o código de cor em todo lugar.
+   Se quiser mudar a cor principal do app, muda só aqui.
+   ================================================ */
+:root {
+  --cor-primaria: #2F6FED;      /* azul principal (saldo, botões, ativo no menu) */
+  --cor-primaria-clara: #E8EFFD;
+  --cor-positiva: #1AA260;      /* verde - receitas */
+  --cor-negativa: #E5484D;      /* vermelho - despesas */
+  --cor-texto: #16181D;
+  --cor-texto-suave: #6B7280;
+  --cor-fundo: #F5F6FA;
+  --cor-branco: #FFFFFF;
+  --cor-borda: #EAECF0;
+
+  --raio-card: 16px;
+  --sombra-card: 0 1px 3px rgba(16, 24, 40, 0.06), 0 1px 2px rgba(16, 24, 40, 0.04);
+}
+
+/* Reset básico: tira margens e paddings padrão do navegador */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/*
+  html e body com altura 100% + overflow hidden = a janela do
+  navegador NÃO vai ter barra de rolagem própria. Quem vai rolar
+  é só o conteúdo de dentro do "celular" (explicado mais abaixo).
+*/
+html, body {
+  height: 100%;
+}
+
+body {
+  font-family: 'Inter', -apple-system, sans-serif;
+  background-color: #E5E7EB; /* fundo da "mesa" atrás do celular */
+  color: var(--cor-texto);
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* ================================================
+   CONTAINER DO APP (simula a tela de um celular)
+   Se ajusta ao tamanho da janela do navegador, até um
+   limite máximo (pra não ficar gigante em monitor grande).
+   ================================================ */
+.app-container {
+  width: 100%;
+  max-width: 420px;
+  height: 100vh;
+  max-height: 100vh;
+  background-color: var(--cor-fundo);
+  position: relative;
+  border-radius: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+@media (min-width: 441px) {
+  .app-container {
+    height: 90vh;
+    max-height: 844px;
+
+    /* Moldura preta grossa, tipo bezel de iPhone */
+    border-radius: 56px;
+    border: 14px solid #0B0B0D;
+
+    /* Sombra dupla: uma suave espalhada (dá profundidade),
+       e uma "inset" bem fina (dá um brilho na borda do vidro) */
+    box-shadow:
+      0 30px 60px -10px rgba(0, 0, 0, 0.45),
+      0 10px 20px rgba(0, 0, 0, 0.25),
+      inset 0 0 0 2px rgba(255, 255, 255, 0.06);
+  }
+
+  /*
+    A "Dynamic Island": uma pílula preta fixa no topo, por cima
+    do conteúdo. É só um ::before (elemento "fantasma" criado via
+    CSS, sem precisar de HTML extra) posicionado no centro.
+  */
+  .app-container::before {
+    content: "";
+    position: absolute;
+    top: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100px;
+    height: 30px;
+    background: #0B0B0D;
+    border-radius: 20px;
+    z-index: 100; /* sempre por cima de qualquer card */
+  }
+}
+
+/* ================================================
+   TELAS (Resumo / Movimentações / Planejamento)
+   Por padrão toda tela fica escondida (display: none).
+   Só a que tiver a classe "tela-ativa" aparece.
+
+   Como .app-container agora é "display: flex; flex-direction: column",
+   a tela ativa vira um "flex item" que cresce (flex: 1) e tem seu
+   próprio scroll (overflow-y: auto). Assim, só o miolo rola —
+   o resto da janela do navegador fica parado.
+   ================================================ */
+.tela {
+  display: none;
+  flex: 1;
+  min-height: 0; /* truque essencial do flexbox: sem isso, o item nunca "encolhe" pra caber, e o scroll não funciona */
+  overflow-y: auto;
+  padding: 20px 16px 90px; /* 90px embaixo = espaço pro menu inferior não tampar o conteúdo */
+  animation: entrada 0.2s ease;
+}
+
+@media (min-width: 441px) {
+  .tela {
+    padding-top: 40px; /* espaço extra pra não ficar atrás da Dynamic Island */
+  }
+}
+
+.tela-ativa {
+  display: block;
+}
+
+@keyframes entrada {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ================================================
+   CABEÇALHO
+   ================================================ */
+.cabecalho {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+}
+
+.saudacao {
+  font-size: 14px;
+  color: var(--cor-texto-suave);
+}
+
+.titulo-tela {
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.botao-icone {
+  background: var(--cor-branco);
+  border: 1px solid var(--cor-borda);
+  border-radius: 12px;
+  width: 40px;
+  height: 40px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+/* ================================================
+   CARDS (a "caixinha branca" usada em quase tudo)
+   ================================================ */
+.card {
+  background-color: var(--cor-branco);
+  border-radius: var(--raio-card);
+  box-shadow: var(--sombra-card);
+  padding: 18px;
+  margin-bottom: 16px;
+}
+
+.card-cabecalho {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.card-titulo {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.rotulo {
+  font-size: 13px;
+  color: var(--cor-texto-suave);
+}
+
+.placeholder {
+  text-align: center;
+  color: var(--cor-texto-suave);
+  padding: 40px 18px;
+}
+
+/* ================================================
+   CARD DE SALDO
+   ================================================ */
+.card-saldo {
+  background: linear-gradient(135deg, var(--cor-primaria), #1E4FBF);
+  color: var(--cor-branco);
+}
+
+.card-saldo .rotulo {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.card-saldo-topo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.botao-olho {
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+}
+
+.valor-saldo {
+  font-size: 30px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.data-saldo {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+/* ================================================
+   GRID DE DUAS COLUNAS (Receitas / Despesas)
+   ================================================ */
+.grid-duas-colunas {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.card-mini {
+  margin-bottom: 0;
+}
+
+.linha-valor {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+}
+
+.valor-positivo { color: var(--cor-positiva); }
+.valor-negativo { color: var(--cor-negativa); }
+
+.selo {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+}
+
+.selo-positivo {
+  background-color: #E7F7EF;
+  color: var(--cor-positiva);
+}
+
+.selo-negativo {
+  background-color: #FDEBEC;
+  color: var(--cor-negativa);
+}
+
+/* ================================================
+   SELETOR DE MÊS
+   ================================================ */
+.seletor-mes {
+  border: 1px solid var(--cor-borda);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--cor-texto);
+  background: var(--cor-fundo);
+}
+
+/* ================================================
+   RESUMO DO MÊS + GRÁFICO DONUT (feito em CSS puro)
+   ================================================ */
+.resumo-mes-conteudo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.resumo-mes-textos p {
+  font-size: 13px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ponto {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.ponto-receita { background-color: var(--cor-positiva); }
+.ponto-despesa { background-color: var(--cor-negativa); }
+
+.saldo-mes {
+  font-size: 13px;
+  color: var(--cor-texto-suave);
+}
+
+/*
+  Esse é o truque do gráfico donut:
+  "conic-gradient" pinta o círculo em fatias, como se fosse
+  um relógio. Usamos a variável --percentual (definida no HTML,
+  em "style") pra saber até onde pintar de azul.
+*/
+.donut {
+  --percentual: 0;
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: conic-gradient(
+    var(--cor-primaria) calc(var(--percentual) * 1%),
+    #E3E7F0 0
+  );
+}
+
+.donut-texto {
+  background: var(--cor-branco);
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.legenda-donut {
+  text-align: right;
+  font-size: 12px;
+  color: var(--cor-texto-suave);
+  margin-top: 8px;
+}
+
+/* ================================================
+   LISTA DE CATEGORIAS
+   ================================================ */
+.link-ver-todas {
+  font-size: 13px;
+  color: var(--cor-primaria);
+  text-decoration: none;
+}
+
+.lista-categorias {
+  list-style: none;
+}
+
+.item-categoria {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.item-categoria:last-child {
+  margin-bottom: 0;
+}
+
+.icone-categoria {
+  width: 36px;
+  height: 36px;
+  background: var(--cor-primaria-clara);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.info-categoria {
+  flex: 1;
+}
+
+.linha-categoria-topo {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.barra-progresso {
+  width: 100%;
+  height: 6px;
+  background: var(--cor-borda);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.barra-progresso-preenchida {
+  height: 100%;
+  background: var(--cor-primaria);
+  border-radius: 4px;
+}
+
+.porcentagem-categoria {
+  font-size: 12px;
+  color: var(--cor-texto-suave);
+  flex-shrink: 0;
+}
+
+/* ================================================
+   MENU INFERIOR (barra fixa embaixo)
+   ================================================ */
+.menu-inferior {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  background: var(--cor-branco);
+  border-top: 1px solid var(--cor-borda);
+  padding: 10px 0 14px;
+}
+
+.item-menu {
+  flex: 1;
+  background: none;
+  border: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--cor-texto-suave);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.icone-menu {
+  font-size: 18px;
+}
+
+.item-menu-ativo {
+  color: var(--cor-primaria);
+  font-weight: 600;
+}
+
+/* ================================================
+   RESPONSIVO
+   Em celulares de verdade (tela pequena), o app já ocupa
+   100% da largura e altura por causa das regras lá em cima.
+   ================================================ */
+
+/* ================================================
+   TELA 2 - MOVIMENTAÇÕES
+   ================================================ */
+
+/* Abas de filtro (Todas / Receitas / Despesas) */
+.abas-filtro {
+  display: flex;
+  gap: 8px;
+  background: var(--cor-branco);
+  padding: 6px;
+  border-radius: 12px;
+  margin-bottom: 16px;
+  border: 1px solid var(--cor-borda);
+}
+
+.aba {
+  flex: 1;
+  border: none;
+  background: none;
+  padding: 8px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--cor-texto-suave);
+  cursor: pointer;
+}
+
+/* Estilo da aba selecionada no momento */
+.aba-ativa {
+  background: var(--cor-primaria);
+  color: var(--cor-branco);
+  font-weight: 600;
+}
+
+/* Botão azul grande de "+ Novo lançamento" */
+.botao-primario {
+  width: 100%;
+  background: var(--cor-primaria);
+  color: var(--cor-branco);
+  border: none;
+  border-radius: 12px;
+  padding: 14px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  margin-bottom: 20px;
+}
+
+/* Título de cada grupo de data ("Hoje", "Ontem"...) */
+.titulo-grupo-data {
+  font-size: 13px;
+  color: var(--cor-texto-suave);
+  margin: 4px 0 10px;
+  font-weight: 600;
+}
+
+.lista-lancamentos {
+  list-style: none;
+  background: var(--cor-branco);
+  border-radius: var(--raio-card);
+  box-shadow: var(--sombra-card);
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+
+.lancamento {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--cor-borda);
+}
+
+.lancamento:last-child {
+  border-bottom: none;
+}
+
+.icone-lancamento {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.icone-receita {
+  background: #E7F7EF;
+}
+
+.icone-despesa {
+  background: #FDEBEC;
+}
+
+.info-lancamento {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  font-size: 14px;
+}
+
+.categoria-lancamento {
+  font-size: 12px;
+  color: var(--cor-texto-suave);
+}
+
+.seta-lancamento {
+  color: var(--cor-texto-suave);
+  font-size: 18px;
+}
+
+/*
+  Essa classe é usada pelo JavaScript pra ESCONDER um lançamento
+  quando ele não bate com o filtro escolhido (ex: filtro "Receitas"
+  escondendo os itens de despesa).
+*/
+.lancamento-escondido {
+  display: none;
+}

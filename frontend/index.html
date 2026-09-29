@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <!-- Isso aqui garante que o site fique bem em celulares (responsivo) -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meu Bolso - App Financeiro</title>
+
+  <!-- Ligando nosso arquivo de estilos -->
+  <link rel="stylesheet" href="css/style.css">
+
+  <!-- Fonte do Google Fonts (deixa o texto mais bonito que a fonte padrão) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!--
+    Toda a nossa "tela de celular" fica dentro dessa div .app-container.
+    É só um truque visual: centralizamos ela e damos uma largura máxima
+    (tipo 420px), pra simular a tela de um celular no navegador.
+  -->
+  <div class="app-container">
+
+    <!-- ============================================= -->
+    <!-- TELA 1 - RESUMO                                -->
+    <!-- ============================================= -->
+    <!--
+      Cada tela é uma <section> com uma classe "tela".
+      A classe "tela-ativa" é o que decide qual tela aparece.
+      O JavaScript (js/script.js) vai trocar essa classe quando
+      você clicar nos ícones do menu de baixo.
+    -->
+    <section id="tela-resumo" class="tela tela-ativa">
+
+      <!-- Cabeçalho da tela -->
+      <header class="cabecalho">
+        <div>
+          <p class="saudacao">Olá!</p>
+          <h1 class="titulo-tela">Matheus Shoiti</h1>
+        </div>
+        <button class="botao-icone" aria-label="Notificações">🔔</button>
+      </header>
+
+      <!-- Card do saldo atual -->
+      <div class="card card-saldo">
+        <div class="card-saldo-topo">
+          <span class="rotulo">Saldo atual</span>
+          <button class="botao-icone botao-olho" id="botao-olho" aria-label="Mostrar ou esconder saldo">👁️</button>
+        </div>
+        <p class="valor-saldo" id="valor-saldo">R$ 4.320,00</p>
+        <span class="data-saldo">Hoje, 02 de Setembro</span>
+      </div>
+
+      <!-- Dois cards lado a lado: Receitas e Despesas -->
+      <div class="grid-duas-colunas">
+        <div class="card card-mini">
+          <span class="rotulo">Receitas</span>
+          <div class="linha-valor">
+            <strong class="valor-positivo">R$ 6.250,00</strong>
+            <span class="selo selo-positivo">↑</span>
+          </div>
+        </div>
+        <div class="card card-mini">
+          <span class="rotulo">Despesas</span>
+          <div class="linha-valor">
+            <strong class="valor-negativo">R$ 1.930,00</strong>
+            <span class="selo selo-negativo">↓</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card "Resumo do mês" com o gráfico donut -->
+      <div class="card">
+        <div class="card-cabecalho">
+          <h2 class="card-titulo">Resumo do mês</h2>
+          <select class="seletor-mes">
+            <option>Setembro</option>
+            <option>Agosto</option>
+            <option>Julho</option>
+          </select>
+        </div>
+
+        <div class="resumo-mes-conteudo">
+          <div class="resumo-mes-textos">
+            <p><span class="ponto ponto-receita"></span> Receitas <strong class="valor-positivo">R$ 6.250,00</strong></p>
+            <p><span class="ponto ponto-despesa"></span> Despesas <strong class="valor-negativo">R$ 1.930,00</strong></p>
+            <p class="saldo-mes">Saldo<br><strong>R$ 4.320,00</strong></p>
+          </div>
+
+          <!--
+            O "donut" (gráfico de rosca) é feito só com CSS,
+            usando um truque chamado "conic-gradient".
+            O número 69% está fixo por enquanto (dado mockado).
+          -->
+          <div class="donut" style="--percentual: 69;">
+            <span class="donut-texto">69%</span>
+          </div>
+        </div>
+        <p class="legenda-donut">Economia</p>
+      </div>
+
+      <!-- Card de categorias de gastos -->
+      <div class="card">
+        <div class="card-cabecalho">
+          <h2 class="card-titulo">Categorias (gastos)</h2>
+          <a href="#" class="link-ver-todas">Ver todas</a>
+        </div>
+
+        <ul class="lista-categorias">
+          <li class="item-categoria">
+            <span class="icone-categoria">🏠</span>
+            <div class="info-categoria">
+              <div class="linha-categoria-topo">
+                <span>Moradia</span>
+                <span>R$ 650,00</span>
+              </div>
+              <div class="barra-progresso">
+                <div class="barra-progresso-preenchida" style="width: 33%;"></div>
+              </div>
+            </div>
+            <span class="porcentagem-categoria">33%</span>
+          </li>
+
+          <li class="item-categoria">
+            <span class="icone-categoria">🛒</span>
+            <div class="info-categoria">
+              <div class="linha-categoria-topo">
+                <span>Alimentação</span>
+                <span>R$ 420,00</span>
+              </div>
+              <div class="barra-progresso">
+                <div class="barra-progresso-preenchida" style="width: 22%;"></div>
+              </div>
+            </div>
+            <span class="porcentagem-categoria">22%</span>
+          </li>
+
+          <li class="item-categoria">
+            <span class="icone-categoria">🚗</span>
+            <div class="info-categoria">
+              <div class="linha-categoria-topo">
+                <span>Transporte</span>
+                <span>R$ 280,00</span>
+              </div>
+              <div class="barra-progresso">
+                <div class="barra-progresso-preenchida" style="width: 14%;"></div>
+              </div>
+            </div>
+            <span class="porcentagem-categoria">14%</span>
+          </li>
+
+          <li class="item-categoria">
+            <span class="icone-categoria">🔘</span>
+            <div class="info-categoria">
+              <div class="linha-categoria-topo">
+                <span>Outros</span>
+                <span>R$ 580,00</span>
+              </div>
+              <div class="barra-progresso">
+                <div class="barra-progresso-preenchida" style="width: 31%;"></div>
+              </div>
+            </div>
+            <span class="porcentagem-categoria">31%</span>
+          </li>
+        </ul>
+      </div>
+
+    </section>
+
+    <!-- ============================================= -->
+    <!-- TELA 2 - MOVIMENTAÇÕES (vamos construir depois) -->
+    <!-- ============================================= -->
+    <section id="tela-movimentacoes" class="tela">
+
+      <header class="cabecalho">
+        <h1 class="titulo-tela">Movimentações</h1>
+        <button class="botao-icone" aria-label="Filtrar">▽</button>
+      </header>
+
+      <!--
+        Abas de filtro (Todas / Receitas / Despesas).
+        Cada botão tem um "data-filtro" que o JS vai usar pra saber
+        o que mostrar ou esconder. O valor "todas" mostra tudo.
+      -->
+      <div class="abas-filtro">
+        <button class="aba aba-ativa" data-filtro="todas">Todas</button>
+        <button class="aba" data-filtro="receita">Receitas</button>
+        <button class="aba" data-filtro="despesa">Despesas</button>
+      </div>
+
+      <button class="botao-primario">+ Novo lançamento</button>
+
+      <!-- Grupo do dia de hoje -->
+      <p class="titulo-grupo-data">Hoje — 02/09/2025</p>
+
+      <ul class="lista-lancamentos">
+        <li class="lancamento" data-tipo="receita">
+          <span class="icone-lancamento icone-receita">↓</span>
+          <div class="info-lancamento">
+            <strong>Salário</strong>
+            <span class="categoria-lancamento">Receita</span>
+          </div>
+          <strong class="valor-positivo">R$ 4.500,00</strong>
+          <span class="seta-lancamento">›</span>
+        </li>
+
+        <li class="lancamento" data-tipo="despesa">
+          <span class="icone-lancamento icone-despesa">🛒</span>
+          <div class="info-lancamento">
+            <strong>Supermercado</strong>
+            <span class="categoria-lancamento">Alimentação</span>
+          </div>
+          <strong class="valor-negativo">- R$ 150,00</strong>
+          <span class="seta-lancamento">›</span>
+        </li>
+
+        <li class="lancamento" data-tipo="despesa">
+          <span class="icone-lancamento icone-despesa">⛽</span>
+          <div class="info-lancamento">
+            <strong>Combustível</strong>
+            <span class="categoria-lancamento">Transporte</span>
+          </div>
+          <strong class="valor-negativo">- R$ 80,00</strong>
+          <span class="seta-lancamento">›</span>
+        </li>
+
+        <li class="lancamento" data-tipo="receita">
+          <span class="icone-lancamento icone-receita">🎁</span>
+          <div class="info-lancamento">
+            <strong>Bônus</strong>
+            <span class="categoria-lancamento">Receita</span>
+          </div>
+          <strong class="valor-positivo">R$ 1.750,00</strong>
+          <span class="seta-lancamento">›</span>
+        </li>
+      </ul>
+
+      <!-- Grupo do dia de ontem -->
+      <p class="titulo-grupo-data">Ontem — 01/09/2025</p>
+
+      <ul class="lista-lancamentos">
+        <li class="lancamento" data-tipo="despesa">
+          <span class="icone-lancamento icone-despesa">🍽️</span>
+          <div class="info-lancamento">
+            <strong>Restaurante</strong>
+            <span class="categoria-lancamento">Alimentação</span>
+          </div>
+          <strong class="valor-negativo">- R$ 60,00</strong>
+          <span class="seta-lancamento">›</span>
+        </li>
+
+        <li class="lancamento" data-tipo="despesa">
+          <span class="icone-lancamento icone-despesa">🏠</span>
+          <div class="info-lancamento">
+            <strong>Aluguel</strong>
+            <span class="categoria-lancamento">Moradia</span>
+          </div>
+          <strong class="valor-negativo">- R$ 650,00</strong>
+          <span class="seta-lancamento">›</span>
+        </li>
+
+        <li class="lancamento" data-tipo="despesa">
+          <span class="icone-lancamento icone-despesa">🚕</span>
+          <div class="info-lancamento">
+            <strong>Transporte por app</strong>
+            <span class="categoria-lancamento">Transporte</span>
+          </div>
+          <strong class="valor-negativo">- R$ 30,00</strong>
+          <span class="seta-lancamento">›</span>
+        </li>
+      </ul>
+
+    </section>
+
+    <!-- ============================================= -->
+    <!-- TELA 3 - PLANEJAMENTO (vamos construir depois)  -->
+    <!-- ============================================= -->
+    <section id="tela-planejamento" class="tela">
+      <header class="cabecalho">
+        <h1 class="titulo-tela">Planejamento</h1>
+      </header>
+      <div class="card placeholder">
+        <p>🚧 Em construção...</p>
+      </div>
+    </section>
+
+    <!-- ============================================= -->
+    <!-- BARRA DE NAVEGAÇÃO INFERIOR                    -->
+    <!-- ============================================= -->
+    <!--
+      O atributo "data-tela" diz pro JavaScript qual tela abrir
+      quando o botão for clicado. Repara que o valor é igual ao
+      "id" das <section> lá em cima (ex: "tela-resumo").
+    -->
+    <nav class="menu-inferior">
+      <button class="item-menu item-menu-ativo" data-tela="tela-resumo">
+        <span class="icone-menu">🏠</span>
+        <span>Resumo</span>
+      </button>
+      <button class="item-menu" data-tela="tela-movimentacoes">
+        <span class="icone-menu">📋</span>
+        <span>Movimentações</span>
+      </button>
+      <button class="item-menu" data-tela="tela-planejamento">
+        <span class="icone-menu">🎯</span>
+        <span>Planejamento</span>
+      </button>
+    </nav>
+
+  </div>
+
+  <!-- Ligando nosso arquivo de JavaScript (sempre no final do body) -->
+  <script src="js/script.js"></script>
+</body>
+</html>
