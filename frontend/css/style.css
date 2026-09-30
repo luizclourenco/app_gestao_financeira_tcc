@@ -594,3 +594,120 @@ body {
 .lancamento-escondido {
   display: none;
 }
+
+/* ================================================
+   TELA 3 - PLANEJAMENTO
+   ================================================ */
+
+/* Meta financeira (dentro do card "Metas financeiras") */
+.meta {
+  display: flex;
+  gap: 12px;
+}
+
+.icone-meta {
+  width: 44px;
+  height: 44px;
+  background: var(--cor-primaria-clara);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.info-meta {
+  flex: 1;
+}
+
+.linha-meta-topo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  margin-bottom: 2px;
+}
+
+.porcentagem-meta {
+  color: var(--cor-primaria);
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.meta-valor-total {
+  font-size: 12px;
+  color: var(--cor-texto-suave);
+  display: block;
+  margin-bottom: 8px;
+}
+
+.meta-valor-atual {
+  font-size: 12px;
+  color: var(--cor-texto-suave);
+  display: block;
+  margin-top: 6px;
+}
+
+/* Linhas do card "Orçamento do mês" */
+.linha-orcamento {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  margin-bottom: 10px;
+}
+
+.linha-orcamento:last-of-type {
+  margin-bottom: 0;
+}
+
+/* Variação verde da barra de progresso (orçamento "saudável") */
+.barra-progresso-verde {
+  background: var(--cor-positiva);
+}
+
+/* Card de dica: ícone + texto lado a lado */
+.card-dica {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.icone-dica {
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+.texto-dica {
+  font-size: 13px;
+  color: var(--cor-texto-suave);
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+/* Grade com os 3 atalhos de relatório */
+.grid-relatorios {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.atalho-relatorio {
+  background: var(--cor-fundo);
+  border: 1px solid var(--cor-borda);
+  border-radius: 12px;
+  padding: 14px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-family: inherit;
+  color: var(--cor-texto);
+  cursor: pointer;
+}
+
+.icone-relatorio {
+  font-size: 20px;
+}
