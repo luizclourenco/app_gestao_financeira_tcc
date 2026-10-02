@@ -14,14 +14,26 @@
 const botoesMenu = document.querySelectorAll('.item-menu');
 const telas = document.querySelectorAll('.tela');
 
+// Quanto tempo o skeleton fica visível antes de "revelar" a tela de verdade
+const DURACAO_SKELETON_MS = 500;
+
 botoesMenu.forEach((botao) => {
   botao.addEventListener('click', () => {
     const idTelaEscolhida = botao.getAttribute('data-tela');
+    const telaEscolhida = document.getElementById(idTelaEscolhida);
 
     telas.forEach((tela) => tela.classList.remove('tela-ativa'));
-
-    const telaEscolhida = document.getElementById(idTelaEscolhida);
     telaEscolhida.classList.add('tela-ativa');
+
+    // Mostra o skeleton assim que a tela aparece...
+    telaEscolhida.classList.add('tela-carregando');
+
+    // ...e depois de um tempinho curto, tira ele e revela o conteúdo real.
+    // (clearTimeout evita bug se a pessoa clicar rápido em várias abas seguidas)
+    clearTimeout(telaEscolhida._temporizadorSkeleton);
+    telaEscolhida._temporizadorSkeleton = setTimeout(() => {
+      telaEscolhida.classList.remove('tela-carregando');
+    }, DURACAO_SKELETON_MS);
 
     botoesMenu.forEach((b) => b.classList.remove('item-menu-ativo'));
     botao.classList.add('item-menu-ativo');
@@ -31,24 +43,32 @@ botoesMenu.forEach((botao) => {
 
 /*
   ================================================
-  PARTE 2 - ESCONDER/MOSTRAR O SALDO (ícone do olho)
+  PARTE 2 - MODO PRIVADO (esconder TODOS os números)
   ================================================
+
+  Antes, o ícone de olho só escondia o saldo. Agora ele ativa um
+  "modo privado" que borra (efeito de desfoque) TODO número em
+  dinheiro ou porcentagem do app de uma vez — saldo, receitas,
+  despesas, categorias, metas, tudo.
+
+  Como isso funciona: todo elemento que mostra um valor sensível
+  tem a classe "valor-sensivel" no HTML. Aqui a gente só liga/
+  desliga um atributo na tag <html> (data-privado="ativo"), e
+  quem realmente aplica o desfoque é uma regra no style.css —
+  mesmo truque que já usamos pro tema claro/escuro.
 */
 
 const botaoOlho = document.getElementById('botao-olho');
+const iconeOlho = document.getElementById('icone-olho');
 const valorSaldoElemento = document.getElementById('valor-saldo');
-let saldoEstaVisivel = true;
+let modoPrivadoAtivo = false;
 
 botaoOlho.addEventListener('click', () => {
-  saldoEstaVisivel = !saldoEstaVisivel;
+  modoPrivadoAtivo = !modoPrivadoAtivo;
 
-  if (saldoEstaVisivel) {
-    valorSaldoElemento.textContent = formatarMoeda(estadoFinanceiro.saldo);
-    botaoOlho.textContent = '👁️';
-  } else {
-    valorSaldoElemento.textContent = 'R$ ••••••';
-    botaoOlho.textContent = '🙈';
-  }
+  document.documentElement.setAttribute('data-privado', modoPrivadoAtivo ? 'ativo' : 'inativo');
+  iconeOlho.classList.toggle('fa-eye', !modoPrivadoAtivo);
+  iconeOlho.classList.toggle('fa-eye-slash', modoPrivadoAtivo);
 });
 
 
@@ -116,31 +136,97 @@ function formatarMoeda(numero) {
   });
 }
 
-// Repinta todos os lugares da tela que mostram Receitas/Despesas/Saldo
-function atualizarResumoNaTela() {
+// Faz o caminho inverso: pega um texto de dinheiro (ex: "- R$ 1.930,00")
+// e devolve só o número (1930). Usamos isso na edição, pra ler o valor
+// que já está escrito na tela e colocar pronto no formulário.
+function paraNumero(textoMoeda) {
+  const apenasDigitosEVirgula = textoMoeda.replace(/[^0-9,]/g, ''); // tira "R$", "-", espaços e pontos de milhar
+  const comPontoDecimal = apenasDigitosEVirgula.replace(',', '.');
+  return parseFloat(comPontoDecimal);
+}
+
+/*
+  Anima um número subindo (ou descendo) suavemente de um valor pro
+  outro, em vez de só "trocar" o texto de repente. Usa
+  requestAnimationFrame, que é a forma correta de fazer animações
+  em JavaScript (o navegador chama essa função ~60 vezes por
+  segundo, sincronizado com a tela, pra não travar nada).
+*/
+function animarNumero(elemento, valorInicial, valorFinal, duracaoMs = 600) {
+  const tempoInicio = performance.now();
+
+  function passo(agora) {
+    // "progresso" vai de 0 (começo) até 1 (fim da animação)
+    const progresso = Math.min((agora - tempoInicio) / duracaoMs, 1);
+
+    // easeOutQuad: faz a animação começar rápido e desacelerar no
+    // final, fica mais natural do que uma velocidade constante
+    const progressoSuave = 1 - (1 - progresso) * (1 - progresso);
+
+    const valorAtual = valorInicial + (valorFinal - valorInicial) * progressoSuave;
+    elemento.textContent = formatarMoeda(valorAtual);
+
+    if (progresso < 1) {
+      requestAnimationFrame(passo); // ainda não terminou, chama de novo no próximo quadro
+    } else {
+      elemento.textContent = formatarMoeda(valorFinal); // garante o valor certinho no final
+    }
+  }
+
+  requestAnimationFrame(passo);
+}
+
+// Igual à de cima, mas pro gráfico donut (que usa número inteiro + CSS var)
+function animarDonut(percentualInicial, percentualFinal, duracaoMs = 600) {
+  const donut = document.getElementById('donut-grafico');
+  const textoDonut = document.getElementById('donut-texto');
+  const tempoInicio = performance.now();
+
+  function passo(agora) {
+    const progresso = Math.min((agora - tempoInicio) / duracaoMs, 1);
+    const progressoSuave = 1 - (1 - progresso) * (1 - progresso);
+    const valorAtual = Math.round(percentualInicial + (percentualFinal - percentualInicial) * progressoSuave);
+
+    donut.style.setProperty('--percentual', valorAtual);
+    textoDonut.textContent = valorAtual + '%';
+
+    if (progresso < 1) {
+      requestAnimationFrame(passo);
+    }
+  }
+
+  requestAnimationFrame(passo);
+}
+
+// Repinta todos os lugares da tela que mostram Receitas/Despesas/Saldo,
+// animando a transição do valor antigo pro novo.
+// "estadoAntigo" é uma "foto" de como estava ANTES da mudança atual.
+function atualizarResumoNaTela(estadoAntigo) {
   estadoFinanceiro.saldo = estadoFinanceiro.receitas - estadoFinanceiro.despesas;
 
   // Economia % = quanto sobrou em relação ao que entrou (regra de 3 simples)
-  const economiaPercentual = estadoFinanceiro.receitas > 0
+  const economiaAntiga = estadoAntigo.receitas > 0
+    ? Math.round((estadoAntigo.saldo / estadoAntigo.receitas) * 100)
+    : 0;
+  const economiaNova = estadoFinanceiro.receitas > 0
     ? Math.round((estadoFinanceiro.saldo / estadoFinanceiro.receitas) * 100)
     : 0;
 
-  // Card de saldo (topo da Tela 1)
-  valorSaldoElemento.textContent = formatarMoeda(estadoFinanceiro.saldo);
+  // Card de saldo (topo da Tela 1). Pode animar tranquilo mesmo no modo
+  // privado: o desfoque é só visual (CSS), o texto por baixo pode mudar.
+  animarNumero(valorSaldoElemento, estadoAntigo.saldo, estadoFinanceiro.saldo);
 
   // Mini-cards Receitas/Despesas
-  document.getElementById('mini-total-receitas').textContent = formatarMoeda(estadoFinanceiro.receitas);
-  document.getElementById('mini-total-despesas').textContent = formatarMoeda(estadoFinanceiro.despesas);
+  animarNumero(document.getElementById('mini-total-receitas'), estadoAntigo.receitas, estadoFinanceiro.receitas);
+  animarNumero(document.getElementById('mini-total-despesas'), estadoAntigo.despesas, estadoFinanceiro.despesas);
 
   // Card "Resumo do mês"
-  document.getElementById('resumo-total-receitas').textContent = formatarMoeda(estadoFinanceiro.receitas);
-  document.getElementById('resumo-total-despesas').textContent = formatarMoeda(estadoFinanceiro.despesas);
-  document.getElementById('resumo-saldo').textContent = formatarMoeda(estadoFinanceiro.saldo);
+  animarNumero(document.getElementById('resumo-total-receitas'), estadoAntigo.receitas, estadoFinanceiro.receitas);
+  animarNumero(document.getElementById('resumo-total-despesas'), estadoAntigo.despesas, estadoFinanceiro.despesas);
+  animarNumero(document.getElementById('resumo-saldo'), estadoAntigo.saldo, estadoFinanceiro.saldo);
 
-  // Gráfico donut: a variável --percentual é o que o CSS usa pra desenhar a fatia
-  const donut = document.getElementById('donut-grafico');
-  donut.style.setProperty('--percentual', economiaPercentual);
-  document.getElementById('donut-texto').textContent = economiaPercentual + '%';
+  // Gráfico donut
+  animarDonut(economiaAntiga, economiaNova);
 }
 
 
@@ -207,39 +293,47 @@ function mostrarToast(mensagem) {
 // Ícone simples por categoria, só pra ficar mais visual (poderia
 // virar um <select> de ícones no futuro)
 const iconesPorCategoria = {
-  'Alimentação': '🛒',
-  'Transporte': '⛽',
-  'Moradia': '🏠',
-  'Lazer': '🎮',
-  'Saúde': '💊',
-  'Receita': '💰',
-  'Outros': '🔘',
+  'Alimentação': 'fa-cart-shopping',
+  'Transporte': 'fa-gas-pump',
+  'Moradia': 'fa-house',
+  'Lazer': 'fa-gamepad',
+  'Saúde': 'fa-briefcase-medical',
+  'Receita': 'fa-sack-dollar',
+  'Outros': 'fa-ellipsis',
 };
 
 const listaHoje = document.getElementById('lista-hoje');
 const CHAVE_LOCALSTORAGE = 'meu-bolso:lancamentos-extras';
 
-// Cria o <li> de um lançamento e coloca no topo da lista de "Hoje"
-function criarElementoLancamento(dados) {
+// Monta (mas NÃO insere na página ainda) o <li> de um lançamento.
+// Reaproveitada tanto pra criar um lançamento novo quanto pra
+// reconstruir um lançamento editado.
+function construirNoLancamento(dados) {
   const item = document.createElement('li');
   item.className = 'lancamento';
   item.setAttribute('data-tipo', dados.tipo);
 
-  const icone = iconesPorCategoria[dados.categoria] || '🔘';
+  const nomeIcone = iconesPorCategoria[dados.categoria] || 'fa-ellipsis';
   const classeIcone = dados.tipo === 'receita' ? 'icone-receita' : 'icone-despesa';
   const classeValor = dados.tipo === 'receita' ? 'valor-positivo' : 'valor-negativo';
   const prefixoValor = dados.tipo === 'receita' ? '' : '- ';
 
   item.innerHTML = `
-    <span class="icone-lancamento ${classeIcone}">${icone}</span>
+    <span class="icone-lancamento ${classeIcone}"><i class="fa-solid ${nomeIcone}"></i></span>
     <div class="info-lancamento">
       <strong>${dados.descricao}</strong>
       <span class="categoria-lancamento">${dados.categoria}</span>
     </div>
-    <strong class="${classeValor}">${prefixoValor}${formatarMoeda(dados.valor)}</strong>
+    <strong class="${classeValor} valor-sensivel">${prefixoValor}${formatarMoeda(dados.valor)}</strong>
     <span class="seta-lancamento">›</span>
   `;
 
+  return item;
+}
+
+// Cria o <li> de um lançamento novo e coloca no topo da lista de "Hoje"
+function criarElementoLancamento(dados) {
+  const item = construirNoLancamento(dados);
   listaHoje.prepend(item); // "prepend" coloca no TOPO da lista, não no final
 }
 
@@ -247,12 +341,16 @@ function criarElementoLancamento(dados) {
 function adicionarLancamento(dados, salvarNoLocalStorage) {
   criarElementoLancamento(dados);
 
+  // "Fotografa" os valores atuais ANTES de mudar — é esse retrato que
+  // vai ser o ponto de partida da animação dos números.
+  const estadoAntigo = { ...estadoFinanceiro };
+
   if (dados.tipo === 'receita') {
     estadoFinanceiro.receitas += dados.valor;
   } else {
     estadoFinanceiro.despesas += dados.valor;
   }
-  atualizarResumoNaTela();
+  atualizarResumoNaTela(estadoAntigo);
 
   if (salvarNoLocalStorage) {
     const lancamentosSalvos = JSON.parse(localStorage.getItem(CHAVE_LOCALSTORAGE)) || [];
@@ -339,6 +437,159 @@ carregarLancamentosSalvos();
 
 /*
   ================================================
+  PARTE 7.5 - EDITAR E EXCLUIR LANÇAMENTO
+  ================================================
+
+  Em vez de colocar um addEventListener em cada <li> (o que não
+  funcionaria pros lançamentos criados depois), usamos "delegação
+  de evento": escutamos o clique na TELA INTEIRA de Movimentações,
+  e perguntamos "esse clique foi dentro de algum .lancamento?".
+  Isso funciona pra qualquer item, antigo ou novo, sem precisar
+  anexar um listener em cada um.
+
+  OBS: isso também funciona pros lançamentos que já vinham prontos
+  no HTML (Salário, Supermercado etc) — a gente lê os dados deles
+  direto do que está escrito na tela (texto, categoria, classe).
+*/
+
+const telaMovimentacoes = document.getElementById('tela-movimentacoes');
+
+// Monta o formulário de edição, já preenchido com os dados atuais do item
+function htmlFormularioEditarLancamento(dadosAtuais) {
+  const categorias = ['Alimentação', 'Transporte', 'Moradia', 'Lazer', 'Saúde', 'Outros'];
+  const opcoesCategoria = categorias
+    .map((cat) => `<option ${cat === dadosAtuais.categoria ? 'selected' : ''}>${cat}</option>`)
+    .join('');
+
+  return `
+    <form id="form-editar-lancamento">
+      <div class="campo-formulario">
+        <label>Tipo</label>
+        <div class="grupo-tipo">
+          <label class="opcao-tipo">
+            <input type="radio" name="tipo-edicao" value="despesa" ${dadosAtuais.tipo === 'despesa' ? 'checked' : ''}> Despesa
+          </label>
+          <label class="opcao-tipo">
+            <input type="radio" name="tipo-edicao" value="receita" ${dadosAtuais.tipo === 'receita' ? 'checked' : ''}> Receita
+          </label>
+        </div>
+      </div>
+
+      <div class="campo-formulario">
+        <label for="campo-descricao-edicao">Descrição</label>
+        <input type="text" id="campo-descricao-edicao" value="${dadosAtuais.descricao}" required>
+      </div>
+
+      <div class="campo-formulario">
+        <label for="campo-categoria-edicao">Categoria</label>
+        <select id="campo-categoria-edicao">${opcoesCategoria}</select>
+      </div>
+
+      <div class="campo-formulario">
+        <label for="campo-valor-edicao">Valor (R$)</label>
+        <input type="number" id="campo-valor-edicao" value="${dadosAtuais.valor}" step="0.01" min="0.01" required>
+      </div>
+
+      <button type="submit" class="botao-primario">Salvar alterações</button>
+      <button type="button" class="botao-perigo" id="botao-excluir-lancamento">Excluir lançamento</button>
+    </form>
+  `;
+}
+
+telaMovimentacoes.addEventListener('click', (evento) => {
+  // .closest() sobe pelos "pais" do elemento clicado até achar um .lancamento.
+  // Se a pessoa clicou em qualquer lugar fora de um lançamento, closest()
+  // devolve null, e a gente simplesmente ignora o clique.
+  const li = evento.target.closest('.lancamento');
+  if (!li) return;
+
+  // Lê os dados ATUAIS direto do que está escrito na tela
+  const dadosAtuais = {
+    tipo: li.getAttribute('data-tipo'),
+    descricao: li.querySelector('.info-lancamento strong').textContent,
+    categoria: li.querySelector('.categoria-lancamento').textContent,
+    valor: paraNumero(li.querySelector('.valor-positivo, .valor-negativo').textContent),
+  };
+
+  abrirModal('Editar lançamento', htmlFormularioEditarLancamento(dadosAtuais));
+
+  // --- Salvar alterações ---
+  document.getElementById('form-editar-lancamento').addEventListener('submit', (eventoSubmit) => {
+    eventoSubmit.preventDefault();
+
+    const tipoNovo = document.querySelector('input[name="tipo-edicao"]:checked').value;
+    const descricaoNova = document.getElementById('campo-descricao-edicao').value.trim();
+    const categoriaNova = tipoNovo === 'receita' ? 'Receita' : document.getElementById('campo-categoria-edicao').value;
+    const valorNovo = parseFloat(document.getElementById('campo-valor-edicao').value);
+
+    if (!descricaoNova || !valorNovo || valorNovo <= 0) {
+      mostrarToast('Preencha descrição e valor corretamente.');
+      return;
+    }
+
+    const estadoAntigo = { ...estadoFinanceiro };
+
+    // Primeiro desfaz o efeito do valor ANTIGO...
+    if (dadosAtuais.tipo === 'receita') {
+      estadoFinanceiro.receitas -= dadosAtuais.valor;
+    } else {
+      estadoFinanceiro.despesas -= dadosAtuais.valor;
+    }
+
+    // ...depois aplica o efeito do valor NOVO
+    if (tipoNovo === 'receita') {
+      estadoFinanceiro.receitas += valorNovo;
+    } else {
+      estadoFinanceiro.despesas += valorNovo;
+    }
+
+    // Troca o <li> antigo por um novo, construído com os dados atualizados,
+    // mantendo a mesma posição na lista (replaceWith faz isso por nós)
+    const noAtualizado = construirNoLancamento({
+      tipo: tipoNovo,
+      descricao: descricaoNova,
+      categoria: categoriaNova,
+      valor: valorNovo,
+    });
+    li.replaceWith(noAtualizado);
+
+    atualizarResumoNaTela(estadoAntigo);
+    fecharModal();
+    mostrarToast('Lançamento atualizado! ✏️');
+  });
+
+  // --- Excluir lançamento (pede confirmação com um segundo clique) ---
+  const botaoExcluir = document.getElementById('botao-excluir-lancamento');
+  let aguardandoConfirmacao = false;
+
+  botaoExcluir.addEventListener('click', () => {
+    if (!aguardandoConfirmacao) {
+      // Primeiro clique: só avisa, ainda não exclui nada
+      aguardandoConfirmacao = true;
+      botaoExcluir.textContent = 'Clique de novo para confirmar';
+      botaoExcluir.classList.add('botao-perigo-confirmando');
+      return;
+    }
+
+    // Segundo clique: agora sim exclui de verdade
+    const estadoAntigo = { ...estadoFinanceiro };
+
+    if (dadosAtuais.tipo === 'receita') {
+      estadoFinanceiro.receitas -= dadosAtuais.valor;
+    } else {
+      estadoFinanceiro.despesas -= dadosAtuais.valor;
+    }
+
+    li.remove();
+    atualizarResumoNaTela(estadoAntigo);
+    fecharModal();
+    mostrarToast('Lançamento excluído. 🗑️');
+  });
+});
+
+
+/*
+  ================================================
   PARTE 8 - "VER TODAS" (categorias e metas) + RELATÓRIOS
   ================================================
 
@@ -349,10 +600,10 @@ carregarLancamentosSalvos();
 */
 
 const categoriasExemplo = [
-  { nome: 'Moradia', valor: 650, porcentagem: 33, icone: '🏠' },
-  { nome: 'Alimentação', valor: 420, porcentagem: 22, icone: '🛒' },
-  { nome: 'Transporte', valor: 280, porcentagem: 14, icone: '⛽' },
-  { nome: 'Outros', valor: 580, porcentagem: 31, icone: '🔘' },
+  { nome: 'Moradia', valor: 650, porcentagem: 33, icone: 'fa-house' },
+  { nome: 'Alimentação', valor: 420, porcentagem: 22, icone: 'fa-cart-shopping' },
+  { nome: 'Transporte', valor: 280, porcentagem: 14, icone: 'fa-gas-pump' },
+  { nome: 'Outros', valor: 580, porcentagem: 31, icone: 'fa-ellipsis' },
 ];
 
 document.getElementById('link-ver-todas-categorias').addEventListener('click', (evento) => {
@@ -361,8 +612,8 @@ document.getElementById('link-ver-todas-categorias').addEventListener('click', (
   const htmlLista = categoriasExemplo.map((categoria) => `
     <div class="modal-lista-item">
       <div class="linha-categoria-topo">
-        <span>${categoria.icone} ${categoria.nome}</span>
-        <span>${formatarMoeda(categoria.valor)}</span>
+        <span><i class="fa-solid ${categoria.icone}"></i> ${categoria.nome}</span>
+        <span class="valor-sensivel">${formatarMoeda(categoria.valor)}</span>
       </div>
       <div class="barra-progresso">
         <div class="barra-progresso-preenchida" style="width: ${categoria.porcentagem}%;"></div>
@@ -374,9 +625,9 @@ document.getElementById('link-ver-todas-categorias').addEventListener('click', (
 });
 
 const metasExemplo = [
-  { nome: 'Reserva de Emergência', meta: 10000, atual: 6000, porcentagem: 60, icone: '🐷' },
-  { nome: 'Viagem para a praia', meta: 3000, atual: 900, porcentagem: 30, icone: '🏖️' },
-  { nome: 'Notebook novo', meta: 5000, atual: 4000, porcentagem: 80, icone: '💻' },
+  { nome: 'Reserva de Emergência', meta: 10000, atual: 6000, porcentagem: 60, icone: 'fa-piggy-bank' },
+  { nome: 'Viagem para a praia', meta: 3000, atual: 900, porcentagem: 30, icone: 'fa-umbrella-beach' },
+  { nome: 'Notebook novo', meta: 5000, atual: 4000, porcentagem: 80, icone: 'fa-laptop' },
 ];
 
 document.getElementById('link-ver-todas-metas').addEventListener('click', (evento) => {
@@ -385,23 +636,86 @@ document.getElementById('link-ver-todas-metas').addEventListener('click', (event
   const htmlLista = metasExemplo.map((meta) => `
     <div class="modal-lista-item">
       <div class="linha-meta-topo">
-        <strong>${meta.icone} ${meta.nome}</strong>
-        <span class="porcentagem-meta">${meta.porcentagem}%</span>
+        <strong><i class="fa-solid ${meta.icone}"></i> ${meta.nome}</strong>
+        <span class="porcentagem-meta valor-sensivel">${meta.porcentagem}%</span>
       </div>
       <div class="barra-progresso">
         <div class="barra-progresso-preenchida" style="width: ${meta.porcentagem}%;"></div>
       </div>
-      <span class="meta-valor-atual">${formatarMoeda(meta.atual)} / ${formatarMoeda(meta.meta)}</span>
+      <span class="meta-valor-atual valor-sensivel">${formatarMoeda(meta.atual)} / ${formatarMoeda(meta.meta)}</span>
     </div>
   `).join('');
 
   abrirModal('Todas as metas', htmlLista);
 });
 
+/*
+  Gráfico de pizza/rosca de verdade pras categorias, usando a
+  biblioteca Chart.js (carregada no index.html). Guardamos a
+  "instância" do gráfico numa variável porque, se a pessoa fechar
+  e abrir o modal de novo, precisamos destruir o gráfico antigo
+  antes de desenhar um novo — senão o Chart.js reclama que já
+  existe um gráfico ali.
+*/
+let instanciaGraficoCategorias = null;
+
+// Lê o valor atual de uma variável de cor do CSS (ex: "--cor-texto"),
+// pra o gráfico usar as cores certas tanto no tema claro quanto escuro
+function lerCorCSS(nomeVariavel) {
+  return getComputedStyle(document.documentElement).getPropertyValue(nomeVariavel).trim();
+}
+
+function desenharGraficoCategorias() {
+  const canvas = document.getElementById('grafico-categorias');
+  if (!canvas) return;
+
+  if (instanciaGraficoCategorias) {
+    instanciaGraficoCategorias.destroy();
+  }
+
+  instanciaGraficoCategorias = new Chart(canvas, {
+    type: 'doughnut',
+    data: {
+      labels: categoriasExemplo.map((categoria) => categoria.nome),
+      datasets: [{
+        data: categoriasExemplo.map((categoria) => categoria.valor),
+        backgroundColor: ['#2F6FED', '#1AA260', '#F59E0B', '#9AA0AC'],
+        borderColor: lerCorCSS('--cor-branco'),
+        borderWidth: 3,
+      }],
+    },
+    options: {
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: {
+            color: lerCorCSS('--cor-texto'),
+            font: { family: 'Inter', size: 12 },
+            padding: 14,
+          },
+        },
+      },
+    },
+  });
+}
+
 // Atalhos de relatório (Mensal / Categorias / Comparativos)
 document.querySelectorAll('.atalho-relatorio').forEach((botao) => {
   botao.addEventListener('click', () => {
     const nomeRelatorio = botao.getAttribute('data-relatorio');
+
+    if (nomeRelatorio === 'Categorias') {
+      abrirModal('Relatório: Categorias', `
+        <canvas id="grafico-categorias" height="220"></canvas>
+        <p style="color: var(--cor-texto-suave); font-size: 12px; text-align: center; margin-top: 14px;">
+          Dados de exemplo — quando o back-end existir, o gráfico passa a usar os lançamentos reais.
+        </p>
+      `);
+      // O <canvas> só existe no HTML depois que abrirModal() o inseriu
+      desenharGraficoCategorias();
+      return;
+    }
+
     abrirModal(`Relatório: ${nomeRelatorio}`, `
       <p style="color: var(--cor-texto-suave); font-size: 14px; line-height: 1.5;">
         🚧 Esse relatório vai ser gerado com dados reais assim que o back-end
@@ -447,11 +761,18 @@ document.querySelectorAll('.seletor-mes').forEach((seletor) => {
 */
 
 const botaoTema = document.getElementById('botao-tema');
+const iconeTema = document.getElementById('icone-tema');
 const CHAVE_TEMA = 'meu-bolso:tema';
 
 function aplicarTema(tema) {
   document.documentElement.setAttribute('data-tema', tema);
-  botaoTema.textContent = tema === 'escuro' ? '☀️' : '🌙';
+
+  if (tema === 'escuro') {
+    iconeTema.classList.replace('fa-moon', 'fa-sun');
+  } else {
+    iconeTema.classList.replace('fa-sun', 'fa-moon');
+  }
+
   localStorage.setItem(CHAVE_TEMA, tema);
 }
 

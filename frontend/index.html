@@ -12,6 +12,11 @@
   <!-- Fonte do Google Fonts (deixa o texto mais bonito que a fonte padrão) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Biblioteca de ícones (Font Awesome). Usamos as classes tipo "fa-house"
+       no lugar de emojis — ficam nítidos em qualquer tamanho de tela e
+       respeitam a cor do tema (claro/escuro) automaticamente. -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 </head>
 <body>
 
@@ -33,6 +38,20 @@
     -->
     <section id="tela-resumo" class="tela tela-ativa">
 
+      <!--
+        Skeleton loading: barrinhas que piscam por uns instantes
+        quando você troca de tela, simulando "carregando dados".
+        O JavaScript controla quando isso aparece (classe
+        .tela-carregando lá no <section>).
+      -->
+      <div class="skeleton-overlay">
+        <div class="skeleton-bloco" style="height: 60px;"></div>
+        <div class="skeleton-bloco" style="height: 120px;"></div>
+        <div class="skeleton-bloco" style="height: 70px;"></div>
+        <div class="skeleton-bloco" style="height: 150px;"></div>
+        <div class="skeleton-bloco" style="height: 180px;"></div>
+      </div>
+
       <!-- Cabeçalho da tela -->
       <header class="cabecalho">
         <div>
@@ -40,8 +59,8 @@
           <h1 class="titulo-tela">Resumo financeiro</h1>
         </div>
         <div class="acoes-cabecalho">
-          <button class="botao-icone" id="botao-tema" aria-label="Alternar tema claro/escuro">🌙</button>
-          <button class="botao-icone" aria-label="Notificações">🔔</button>
+          <button class="botao-icone" id="botao-tema" aria-label="Alternar tema claro/escuro"><i class="fa-solid fa-moon" id="icone-tema"></i></button>
+          <button class="botao-icone" aria-label="Notificações"><i class="fa-regular fa-bell"></i></button>
         </div>
       </header>
 
@@ -49,9 +68,9 @@
       <div class="card card-saldo">
         <div class="card-saldo-topo">
           <span class="rotulo">Saldo atual</span>
-          <button class="botao-icone botao-olho" id="botao-olho" aria-label="Mostrar ou esconder saldo">👁️</button>
+          <button class="botao-icone botao-olho" id="botao-olho" aria-label="Mostrar ou esconder saldo"><i class="fa-regular fa-eye" id="icone-olho"></i></button>
         </div>
-        <p class="valor-saldo" id="valor-saldo">R$ 4.320,00</p>
+        <p class="valor-saldo valor-sensivel" id="valor-saldo">R$ 4.320,00</p>
         <span class="data-saldo">Hoje, 02 de Setembro</span>
       </div>
 
@@ -60,14 +79,14 @@
         <div class="card card-mini">
           <span class="rotulo">Receitas</span>
           <div class="linha-valor">
-            <strong class="valor-positivo" id="mini-total-receitas">R$ 6.250,00</strong>
+            <strong class="valor-positivo valor-sensivel" id="mini-total-receitas">R$ 6.250,00</strong>
             <span class="selo selo-positivo">↑</span>
           </div>
         </div>
         <div class="card card-mini">
           <span class="rotulo">Despesas</span>
           <div class="linha-valor">
-            <strong class="valor-negativo" id="mini-total-despesas">R$ 1.930,00</strong>
+            <strong class="valor-negativo valor-sensivel" id="mini-total-despesas">R$ 1.930,00</strong>
             <span class="selo selo-negativo">↓</span>
           </div>
         </div>
@@ -86,9 +105,9 @@
 
         <div class="resumo-mes-conteudo">
           <div class="resumo-mes-textos">
-            <p><span class="ponto ponto-receita"></span> Receitas <strong class="valor-positivo" id="resumo-total-receitas">R$ 6.250,00</strong></p>
-            <p><span class="ponto ponto-despesa"></span> Despesas <strong class="valor-negativo" id="resumo-total-despesas">R$ 1.930,00</strong></p>
-            <p class="saldo-mes">Saldo<br><strong id="resumo-saldo">R$ 4.320,00</strong></p>
+            <p><span class="ponto ponto-receita"></span> Receitas <strong class="valor-positivo valor-sensivel" id="resumo-total-receitas">R$ 6.250,00</strong></p>
+            <p><span class="ponto ponto-despesa"></span> Despesas <strong class="valor-negativo valor-sensivel" id="resumo-total-despesas">R$ 1.930,00</strong></p>
+            <p class="saldo-mes">Saldo<br><strong class="valor-sensivel" id="resumo-saldo">R$ 4.320,00</strong></p>
           </div>
 
           <!--
@@ -97,7 +116,7 @@
             O número 69% está fixo por enquanto (dado mockado).
           -->
           <div class="donut" id="donut-grafico" style="--percentual: 69;">
-            <span class="donut-texto" id="donut-texto">69%</span>
+            <span class="donut-texto valor-sensivel" id="donut-texto">69%</span>
           </div>
         </div>
         <p class="legenda-donut">Economia</p>
@@ -112,59 +131,59 @@
 
         <ul class="lista-categorias">
           <li class="item-categoria">
-            <span class="icone-categoria">🏠</span>
+            <span class="icone-categoria"><i class="fa-solid fa-house"></i></span>
             <div class="info-categoria">
               <div class="linha-categoria-topo">
                 <span>Moradia</span>
-                <span>R$ 650,00</span>
+                <span class="valor-sensivel">R$ 650,00</span>
               </div>
               <div class="barra-progresso">
                 <div class="barra-progresso-preenchida" style="width: 33%;"></div>
               </div>
             </div>
-            <span class="porcentagem-categoria">33%</span>
+            <span class="porcentagem-categoria valor-sensivel">33%</span>
           </li>
 
           <li class="item-categoria">
-            <span class="icone-categoria">🛒</span>
+            <span class="icone-categoria"><i class="fa-solid fa-cart-shopping"></i></span>
             <div class="info-categoria">
               <div class="linha-categoria-topo">
                 <span>Alimentação</span>
-                <span>R$ 420,00</span>
+                <span class="valor-sensivel">R$ 420,00</span>
               </div>
               <div class="barra-progresso">
                 <div class="barra-progresso-preenchida" style="width: 22%;"></div>
               </div>
             </div>
-            <span class="porcentagem-categoria">22%</span>
+            <span class="porcentagem-categoria valor-sensivel">22%</span>
           </li>
 
           <li class="item-categoria">
-            <span class="icone-categoria">🚗</span>
+            <span class="icone-categoria"><i class="fa-solid fa-car"></i></span>
             <div class="info-categoria">
               <div class="linha-categoria-topo">
                 <span>Transporte</span>
-                <span>R$ 280,00</span>
+                <span class="valor-sensivel">R$ 280,00</span>
               </div>
               <div class="barra-progresso">
                 <div class="barra-progresso-preenchida" style="width: 14%;"></div>
               </div>
             </div>
-            <span class="porcentagem-categoria">14%</span>
+            <span class="porcentagem-categoria valor-sensivel">14%</span>
           </li>
 
           <li class="item-categoria">
-            <span class="icone-categoria">🔘</span>
+            <span class="icone-categoria"><i class="fa-solid fa-ellipsis"></i></span>
             <div class="info-categoria">
               <div class="linha-categoria-topo">
                 <span>Outros</span>
-                <span>R$ 580,00</span>
+                <span class="valor-sensivel">R$ 580,00</span>
               </div>
               <div class="barra-progresso">
                 <div class="barra-progresso-preenchida" style="width: 31%;"></div>
               </div>
             </div>
-            <span class="porcentagem-categoria">31%</span>
+            <span class="porcentagem-categoria valor-sensivel">31%</span>
           </li>
         </ul>
       </div>
@@ -176,9 +195,16 @@
     <!-- ============================================= -->
     <section id="tela-movimentacoes" class="tela">
 
+      <div class="skeleton-overlay">
+        <div class="skeleton-bloco" style="height: 50px;"></div>
+        <div class="skeleton-bloco" style="height: 50px;"></div>
+        <div class="skeleton-bloco" style="height: 220px;"></div>
+        <div class="skeleton-bloco" style="height: 150px;"></div>
+      </div>
+
       <header class="cabecalho">
         <h1 class="titulo-tela">Movimentações</h1>
-        <button class="botao-icone" aria-label="Filtrar">▽</button>
+        <button class="botao-icone" aria-label="Filtrar"><i class="fa-solid fa-filter"></i></button>
       </header>
 
       <!--
@@ -199,42 +225,42 @@
 
       <ul class="lista-lancamentos" id="lista-hoje">
         <li class="lancamento" data-tipo="receita">
-          <span class="icone-lancamento icone-receita">↓</span>
+          <span class="icone-lancamento icone-receita"><i class="fa-solid fa-sack-dollar"></i></span>
           <div class="info-lancamento">
             <strong>Salário</strong>
             <span class="categoria-lancamento">Receita</span>
           </div>
-          <strong class="valor-positivo">R$ 4.500,00</strong>
+          <strong class="valor-positivo valor-sensivel">R$ 4.500,00</strong>
           <span class="seta-lancamento">›</span>
         </li>
 
         <li class="lancamento" data-tipo="despesa">
-          <span class="icone-lancamento icone-despesa">🛒</span>
+          <span class="icone-lancamento icone-despesa"><i class="fa-solid fa-cart-shopping"></i></span>
           <div class="info-lancamento">
             <strong>Supermercado</strong>
             <span class="categoria-lancamento">Alimentação</span>
           </div>
-          <strong class="valor-negativo">- R$ 150,00</strong>
+          <strong class="valor-negativo valor-sensivel">- R$ 150,00</strong>
           <span class="seta-lancamento">›</span>
         </li>
 
         <li class="lancamento" data-tipo="despesa">
-          <span class="icone-lancamento icone-despesa">⛽</span>
+          <span class="icone-lancamento icone-despesa"><i class="fa-solid fa-gas-pump"></i></span>
           <div class="info-lancamento">
             <strong>Combustível</strong>
             <span class="categoria-lancamento">Transporte</span>
           </div>
-          <strong class="valor-negativo">- R$ 80,00</strong>
+          <strong class="valor-negativo valor-sensivel">- R$ 80,00</strong>
           <span class="seta-lancamento">›</span>
         </li>
 
         <li class="lancamento" data-tipo="receita">
-          <span class="icone-lancamento icone-receita">🎁</span>
+          <span class="icone-lancamento icone-receita"><i class="fa-solid fa-gift"></i></span>
           <div class="info-lancamento">
             <strong>Bônus</strong>
             <span class="categoria-lancamento">Receita</span>
           </div>
-          <strong class="valor-positivo">R$ 1.750,00</strong>
+          <strong class="valor-positivo valor-sensivel">R$ 1.750,00</strong>
           <span class="seta-lancamento">›</span>
         </li>
       </ul>
@@ -244,32 +270,32 @@
 
       <ul class="lista-lancamentos">
         <li class="lancamento" data-tipo="despesa">
-          <span class="icone-lancamento icone-despesa">🍽️</span>
+          <span class="icone-lancamento icone-despesa"><i class="fa-solid fa-utensils"></i></span>
           <div class="info-lancamento">
             <strong>Restaurante</strong>
             <span class="categoria-lancamento">Alimentação</span>
           </div>
-          <strong class="valor-negativo">- R$ 60,00</strong>
+          <strong class="valor-negativo valor-sensivel">- R$ 60,00</strong>
           <span class="seta-lancamento">›</span>
         </li>
 
         <li class="lancamento" data-tipo="despesa">
-          <span class="icone-lancamento icone-despesa">🏠</span>
+          <span class="icone-lancamento icone-despesa"><i class="fa-solid fa-house"></i></span>
           <div class="info-lancamento">
             <strong>Aluguel</strong>
             <span class="categoria-lancamento">Moradia</span>
           </div>
-          <strong class="valor-negativo">- R$ 650,00</strong>
+          <strong class="valor-negativo valor-sensivel">- R$ 650,00</strong>
           <span class="seta-lancamento">›</span>
         </li>
 
         <li class="lancamento" data-tipo="despesa">
-          <span class="icone-lancamento icone-despesa">🚕</span>
+          <span class="icone-lancamento icone-despesa"><i class="fa-solid fa-car-side"></i></span>
           <div class="info-lancamento">
             <strong>Transporte por app</strong>
             <span class="categoria-lancamento">Transporte</span>
           </div>
-          <strong class="valor-negativo">- R$ 30,00</strong>
+          <strong class="valor-negativo valor-sensivel">- R$ 30,00</strong>
           <span class="seta-lancamento">›</span>
         </li>
       </ul>
@@ -281,9 +307,17 @@
     <!-- ============================================= -->
     <section id="tela-planejamento" class="tela">
 
+      <div class="skeleton-overlay">
+        <div class="skeleton-bloco" style="height: 50px;"></div>
+        <div class="skeleton-bloco" style="height: 140px;"></div>
+        <div class="skeleton-bloco" style="height: 120px;"></div>
+        <div class="skeleton-bloco" style="height: 90px;"></div>
+        <div class="skeleton-bloco" style="height: 110px;"></div>
+      </div>
+
       <header class="cabecalho">
         <h1 class="titulo-tela">Planejamento</h1>
-        <button class="botao-icone" aria-label="Configurações">⚙️</button>
+        <button class="botao-icone" aria-label="Configurações"><i class="fa-solid fa-gear"></i></button>
       </header>
 
       <!-- Card de Metas financeiras -->
@@ -294,17 +328,17 @@
         </div>
 
         <div class="meta">
-          <span class="icone-meta">🐷</span>
+          <span class="icone-meta"><i class="fa-solid fa-piggy-bank"></i></span>
           <div class="info-meta">
             <div class="linha-meta-topo">
               <strong>Reserva de Emergência</strong>
-              <span class="porcentagem-meta">60%</span>
+              <span class="porcentagem-meta valor-sensivel">60%</span>
             </div>
-            <span class="meta-valor-total">Meta: R$ 10.000,00</span>
+            <span class="meta-valor-total valor-sensivel">Meta: R$ 10.000,00</span>
             <div class="barra-progresso">
               <div class="barra-progresso-preenchida" style="width: 60%;"></div>
             </div>
-            <span class="meta-valor-atual">R$ 6.000,00 / R$ 10.000,00</span>
+            <span class="meta-valor-atual valor-sensivel">R$ 6.000,00 / R$ 10.000,00</span>
           </div>
         </div>
       </div>
@@ -322,15 +356,15 @@
 
         <div class="linha-orcamento">
           <span class="rotulo">Gasto previsto</span>
-          <strong>R$ 5.000,00</strong>
+          <strong class="valor-sensivel">R$ 5.000,00</strong>
         </div>
         <div class="linha-orcamento">
           <span class="rotulo">Gasto realizado</span>
-          <strong>R$ 1.930,00</strong>
+          <strong class="valor-sensivel">R$ 1.930,00</strong>
         </div>
         <div class="linha-orcamento">
           <span class="rotulo">Restante</span>
-          <strong class="valor-positivo">R$ 3.070,00</strong>
+          <strong class="valor-positivo valor-sensivel">R$ 3.070,00</strong>
         </div>
 
         <div class="barra-progresso" style="margin-top: 10px;">
@@ -340,7 +374,7 @@
 
       <!-- Card de Dica -->
       <div class="card card-dica">
-        <span class="icone-dica">💡</span>
+        <span class="icone-dica"><i class="fa-solid fa-lightbulb"></i></span>
         <div>
           <h2 class="card-titulo">Dicas para você</h2>
           <p class="texto-dica">Continue assim! Você está no caminho certo para alcançar suas metas.</p>
@@ -356,15 +390,15 @@
 
         <div class="grid-relatorios">
           <button class="atalho-relatorio" data-relatorio="Mensal">
-            <span class="icone-relatorio">📅</span>
+            <span class="icone-relatorio"><i class="fa-solid fa-calendar-days"></i></span>
             <span>Mensal</span>
           </button>
           <button class="atalho-relatorio" data-relatorio="Categorias">
-            <span class="icone-relatorio">⚪</span>
+            <span class="icone-relatorio"><i class="fa-solid fa-chart-pie"></i></span>
             <span>Categorias</span>
           </button>
           <button class="atalho-relatorio" data-relatorio="Comparativos">
-            <span class="icone-relatorio">📊</span>
+            <span class="icone-relatorio"><i class="fa-solid fa-chart-column"></i></span>
             <span>Comparativos</span>
           </button>
         </div>
@@ -382,15 +416,15 @@
     -->
     <nav class="menu-inferior">
       <button class="item-menu item-menu-ativo" data-tela="tela-resumo">
-        <span class="icone-menu">🏠</span>
+        <span class="icone-menu"><i class="fa-solid fa-house"></i></span>
         <span>Resumo</span>
       </button>
       <button class="item-menu" data-tela="tela-movimentacoes">
-        <span class="icone-menu">📋</span>
+        <span class="icone-menu"><i class="fa-solid fa-list"></i></span>
         <span>Movimentações</span>
       </button>
       <button class="item-menu" data-tela="tela-planejamento">
-        <span class="icone-menu">🎯</span>
+        <span class="icone-menu"><i class="fa-solid fa-bullseye"></i></span>
         <span>Planejamento</span>
       </button>
     </nav>
@@ -411,7 +445,7 @@
       <div class="modal-caixa">
         <div class="modal-cabecalho">
           <h2 id="modal-titulo">Título</h2>
-          <button class="botao-icone" id="botao-fechar-modal" aria-label="Fechar">✕</button>
+          <button class="botao-icone" id="botao-fechar-modal" aria-label="Fechar"><i class="fa-solid fa-xmark"></i></button>
         </div>
         <div class="modal-corpo" id="modal-corpo">
           <!-- Conteúdo é inserido aqui via JavaScript -->
@@ -423,6 +457,9 @@
     <div class="toast" id="toast"></div>
 
   </div>
+
+  <!-- Biblioteca de gráficos, usada no relatório de Categorias -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
 
   <!-- Ligando nosso arquivo de JavaScript (sempre no final do body) -->
   <script src="js/script.js"></script>

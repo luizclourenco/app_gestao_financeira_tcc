@@ -141,6 +141,7 @@ body {
   flex: 1;
   min-height: 0; /* truque essencial do flexbox: sem isso, o item nunca "encolhe" pra caber, e o scroll não funciona */
   overflow-y: auto;
+  position: relative; /* necessário pra o skeleton (abaixo) poder cobrir só esta tela */
   padding: 20px 16px 90px; /* 90px embaixo = espaço pro menu inferior não tampar o conteúdo */
   animation: entrada 0.2s ease;
 
@@ -510,6 +511,95 @@ body {
 .item-menu-ativo {
   color: var(--cor-primaria);
   font-weight: 600;
+}
+
+/* ================================================
+   SKELETON LOADING
+   ================================================
+   É aquele efeito de "barrinhas cinzas piscando" que apps de
+   verdade mostram por um instante enquanto os dados carregam.
+   Como nosso app ainda não busca nada de um servidor de verdade,
+   isso é só pra dar a SENSAÇÃO de carregamento — por baixo, o
+   conteúdo real já está pronto, só escondido.
+*/
+
+.skeleton-overlay {
+  display: none; /* só aparece quando a tela ganha a classe .tela-carregando */
+  position: absolute;
+  inset: 0;
+  background: var(--cor-fundo);
+  padding: 20px 16px;
+  z-index: 60;
+}
+
+.tela-carregando .skeleton-overlay {
+  display: block;
+}
+
+/*
+  Enquanto o skeleton está visível, escondemos o conteúdo real por
+  baixo dele (ele já estaria lá, só não precisa aparecer por trás).
+*/
+.tela-carregando > *:not(.skeleton-overlay) {
+  visibility: hidden;
+}
+
+.skeleton-bloco {
+  border-radius: 14px;
+  margin-bottom: 16px;
+  background: linear-gradient(
+    100deg,
+    var(--cor-borda) 30%,
+    var(--cor-fundo-pagina) 50%,
+    var(--cor-borda) 70%
+  );
+  background-size: 300% 100%;
+  animation: brilho-skeleton 1.3s ease-in-out infinite;
+}
+
+@keyframes brilho-skeleton {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+
+/* ================================================
+   MODO PRIVADO (esconder todos os números)
+   ================================================
+   Toda vez que um valor em dinheiro ou porcentagem aparece em
+   algum lugar do app, a gente marca o elemento com a classe
+   "valor-sensivel". Quando o modo privado está ativo (atributo
+   data-privado="ativo" na tag <html>), essa regra borra (blur)
+   TODOS eles de uma vez, sem precisar trocar o texto de cada um.
+*/
+.valor-sensivel {
+  transition: filter 0.2s ease;
+}
+
+html[data-privado="ativo"] .valor-sensivel {
+  filter: blur(7px);
+  user-select: none; /* impede de selecionar/copiar o texto borrado */
+}
+
+/* Botão de ação perigosa (excluir) */
+.botao-perigo {
+  width: 100%;
+  margin-top: 10px;
+  background: transparent;
+  border: 1px solid var(--cor-negativa);
+  color: var(--cor-negativa);
+  border-radius: 12px;
+  padding: 14px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+/* Estado depois do primeiro clique, pedindo confirmação */
+.botao-perigo-confirmando {
+  background: var(--cor-negativa);
+  color: var(--cor-texto-inverso);
 }
 
 /* ================================================
