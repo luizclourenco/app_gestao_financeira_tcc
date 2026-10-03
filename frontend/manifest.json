@@ -1,0 +1,19 @@
+{
+  "name": "Meu Bolso - Gestão Financeira Pessoal",
+  "short_name": "Meu Bolso",
+  "description": "App de controle financeiro pessoal (TCC)",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#E5E7EB",
+  "theme_color": "#2F6FED",
+  "icons": [
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

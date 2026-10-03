@@ -6,6 +6,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Meu Bolso - App Financeiro</title>
 
+  <!-- Favicon (ícone que aparece na aba do navegador) -->
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+
+  <!-- PWA: diz ao navegador como o app pode ser "instalado" -->
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/icon.svg">
+  <meta name="theme-color" content="#2F6FED">
+
   <!-- Ligando nosso arquivo de estilos -->
   <link rel="stylesheet" href="css/style.css">
 
@@ -26,6 +34,63 @@
     (tipo 420px), pra simular a tela de um celular no navegador.
   -->
   <div class="app-container">
+
+    <!--
+      ================================================
+      TELA DE LOGIN / CADASTRO
+      ================================================
+      Fica por cima de tudo (position: absolute, inset: 0) até a
+      pessoa entrar ou criar conta. Depois disso, o JavaScript
+      esconde essa tela e revela o app normal por baixo.
+
+      Isso representa a tabela USUARIO do DER — por enquanto é só
+      visual (guarda num localStorage), mas no dia que existir
+      back-end, é aqui que entraria a chamada de login de verdade.
+    -->
+    <section id="tela-login" class="tela-auth">
+      <div class="auth-conteudo">
+        <div class="auth-logo"><i class="fa-solid fa-wallet"></i></div>
+        <h1 class="auth-titulo">Meu Bolso</h1>
+        <p class="auth-subtitulo">Controle financeiro simples e direto</p>
+
+        <div class="auth-abas">
+          <button class="auth-aba auth-aba-ativa" data-formulario="form-login" type="button">Entrar</button>
+          <button class="auth-aba" data-formulario="form-cadastro" type="button">Criar conta</button>
+        </div>
+
+        <!-- Formulário de login -->
+        <form id="form-login" class="auth-form">
+          <div class="campo-formulario">
+            <label for="login-email">E-mail</label>
+            <input type="email" id="login-email" placeholder="voce@email.com" required>
+          </div>
+          <div class="campo-formulario">
+            <label for="login-senha">Senha</label>
+            <input type="password" id="login-senha" placeholder="••••••••" required>
+          </div>
+          <button type="submit" class="botao-primario">Entrar</button>
+        </form>
+
+        <!-- Formulário de cadastro (começa escondido) -->
+        <form id="form-cadastro" class="auth-form auth-form-escondido">
+          <div class="campo-formulario">
+            <label for="cadastro-nome">Nome</label>
+            <input type="text" id="cadastro-nome" placeholder="Seu nome" required>
+          </div>
+          <div class="campo-formulario">
+            <label for="cadastro-email">E-mail</label>
+            <input type="email" id="cadastro-email" placeholder="voce@email.com" required>
+          </div>
+          <div class="campo-formulario">
+            <label for="cadastro-senha">Senha</label>
+            <input type="password" id="cadastro-senha" placeholder="Mínimo 6 caracteres" minlength="6" required>
+          </div>
+          <button type="submit" class="botao-primario">Criar conta</button>
+        </form>
+
+        <p class="auth-aviso">🚧 Login visual por enquanto — a validação de verdade vem com o back-end.</p>
+      </div>
+    </section>
 
     <!-- ============================================= -->
     <!-- TELA 1 - RESUMO                                -->
@@ -55,7 +120,7 @@
       <!-- Cabeçalho da tela -->
       <header class="cabecalho">
         <div>
-          <p class="saudacao">Olá!</p>
+          <p class="saudacao" id="texto-saudacao">Olá!</p>
           <h1 class="titulo-tela">Resumo financeiro</h1>
         </div>
         <div class="acoes-cabecalho">
@@ -317,7 +382,7 @@
 
       <header class="cabecalho">
         <h1 class="titulo-tela">Planejamento</h1>
-        <button class="botao-icone" aria-label="Configurações"><i class="fa-solid fa-gear"></i></button>
+        <button class="botao-icone" id="botao-sair" aria-label="Sair da conta"><i class="fa-solid fa-gear"></i></button>
       </header>
 
       <!-- Card de Metas financeiras -->

@@ -603,6 +603,101 @@ html[data-privado="ativo"] .valor-sensivel {
 }
 
 /* ================================================
+   TELA DE LOGIN / CADASTRO
+   ================================================
+   Fica por cima de TUDO (z-index bem alto) até a pessoa entrar.
+   Quando o JavaScript considera "logado", adiciona a classe
+   .tela-auth-escondida, que simplesmente tira ela da tela.
+*/
+.tela-auth {
+  position: absolute;
+  inset: 0;
+  z-index: 500;
+  background: var(--cor-fundo);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 24px;
+  overflow-y: auto;
+}
+
+.tela-auth-escondida {
+  display: none;
+}
+
+.auth-conteudo {
+  width: 100%;
+  max-width: 320px;
+}
+
+.auth-logo {
+  width: 64px;
+  height: 64px;
+  background: var(--cor-primaria);
+  color: var(--cor-texto-inverso);
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  margin: 0 auto 16px;
+}
+
+.auth-titulo {
+  text-align: center;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.auth-subtitulo {
+  text-align: center;
+  font-size: 13px;
+  color: var(--cor-texto-suave);
+  margin-bottom: 24px;
+}
+
+/* Abas "Entrar" / "Criar conta" */
+.auth-abas {
+  display: flex;
+  gap: 8px;
+  background: var(--cor-branco);
+  border: 1px solid var(--cor-borda);
+  padding: 6px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+}
+
+.auth-aba {
+  flex: 1;
+  border: none;
+  background: none;
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--cor-texto-suave);
+  cursor: pointer;
+}
+
+.auth-aba-ativa {
+  background: var(--cor-primaria);
+  color: var(--cor-texto-inverso);
+  font-weight: 600;
+}
+
+.auth-form-escondido {
+  display: none;
+}
+
+.auth-aviso {
+  text-align: center;
+  font-size: 11px;
+  color: var(--cor-texto-suave);
+  margin-top: 18px;
+  line-height: 1.4;
+}
+
+/* ================================================
    RESPONSIVO
    Em celulares de verdade (tela pequena), o app já ocupa
    100% da largura e altura por causa das regras lá em cima.

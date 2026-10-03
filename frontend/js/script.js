@@ -748,6 +748,117 @@ document.querySelectorAll('.seletor-mes').forEach((seletor) => {
 
 /*
   ================================================
+  PARTE 11 - REGISTRANDO O SERVICE WORKER (PWA)
+  ================================================
+
+  Isso "liga" o arquivo sw.js que criamos. A partir daqui, o
+  navegador passa a reconhecer esse site como um app instalável
+  (vai aparecer um botão de "Instalar" na barra de endereço, ou
+  "Adicionar à tela de início" no celular).
+
+  Importante: Service Worker só funciona em HTTPS ou em
+  localhost/127.0.0.1 (por segurança). O Live Server do VS Code já
+  roda em 127.0.0.1, então funciona normalmente nos testes locais.
+*/
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker
+      .register('sw.js')
+      .catch((erro) => console.log('Não foi possível registrar o Service Worker:', erro));
+  });
+}
+
+
+/*
+  ================================================
+  PARTE 12 - LOGIN, CADASTRO E LOGOUT
+  ================================================
+
+  Como ainda não existe back-end, "entrar" ou "criar conta" aqui
+  não checa senha nem nada de verdade — só guarda o nome/e-mail no
+  localStorage e esconde a tela de login. O objetivo é mostrar o
+  FLUXO (tela existe, formulário funciona, app reconhece "logado"),
+  pra depois só trocar essa parte por uma chamada de API de
+  verdade (fetch pra uma rota tipo /login).
+*/
+
+const CHAVE_USUARIO = 'meu-bolso:usuario';
+const telaLogin = document.getElementById('tela-login');
+const textoSaudacao = document.getElementById('texto-saudacao');
+
+// Troca de aba entre "Entrar" e "Criar conta"
+document.querySelectorAll('.auth-aba').forEach((aba) => {
+  aba.addEventListener('click', () => {
+    document.querySelectorAll('.auth-aba').forEach((a) => a.classList.remove('auth-aba-ativa'));
+    aba.classList.add('auth-aba-ativa');
+
+    const idFormularioEscolhido = aba.getAttribute('data-formulario');
+    document.querySelectorAll('.auth-form').forEach((formulario) => {
+      formulario.classList.toggle('auth-form-escondido', formulario.id !== idFormularioEscolhido);
+    });
+  });
+});
+
+// Esconde a tela de login e mostra o app, já com o nome da pessoa
+function entrarNoApp(nome) {
+  telaLogin.classList.add('tela-auth-escondida');
+  textoSaudacao.textContent = `Olá, ${nome}!`;
+}
+
+// --- Formulário de login ---
+document.getElementById('form-login').addEventListener('submit', (evento) => {
+  evento.preventDefault();
+
+  const email = document.getElementById('login-email').value.trim();
+  if (!email) return;
+
+  // Se a pessoa já tinha se cadastrado antes (mesmo e-mail), usa o nome
+  // salvo. Senão, usa a parte antes do "@" do e-mail como nome provisório.
+  const usuarioSalvo = JSON.parse(localStorage.getItem(CHAVE_USUARIO));
+  const nome = (usuarioSalvo && usuarioSalvo.email === email) ? usuarioSalvo.nome : email.split('@')[0];
+
+  localStorage.setItem(CHAVE_USUARIO, JSON.stringify({ nome, email }));
+  entrarNoApp(nome);
+});
+
+// --- Formulário de cadastro ---
+document.getElementById('form-cadastro').addEventListener('submit', (evento) => {
+  evento.preventDefault();
+
+  const nome = document.getElementById('cadastro-nome').value.trim();
+  const email = document.getElementById('cadastro-email').value.trim();
+  if (!nome || !email) return;
+
+  localStorage.setItem(CHAVE_USUARIO, JSON.stringify({ nome, email }));
+  entrarNoApp(nome);
+});
+
+// --- Logout (botão de engrenagem na Tela 3) ---
+document.getElementById('botao-sair').addEventListener('click', () => {
+  localStorage.removeItem(CHAVE_USUARIO);
+  telaLogin.classList.remove('tela-auth-escondida');
+
+  // Volta pro formulário de login (caso tivesse ficado na aba de cadastro)
+  document.querySelector('[data-formulario="form-login"]').click();
+
+  // Some com os campos preenchidos, pra não ficar o e-mail/senha da pessoa anterior
+  document.getElementById('form-login').reset();
+  document.getElementById('form-cadastro').reset();
+
+  // Volta pra Tela 1, pra da próxima vez que logar já abrir no Resumo
+  document.querySelector('[data-tela="tela-resumo"]').click();
+});
+
+// --- Ao carregar a página: se já tinha usuário salvo, pula o login ---
+const usuarioJaLogado = JSON.parse(localStorage.getItem(CHAVE_USUARIO));
+if (usuarioJaLogado) {
+  entrarNoApp(usuarioJaLogado.nome);
+}
+
+
+/*
+  ================================================
   PARTE 10 - TEMA CLARO / ESCURO
   ================================================
 
