@@ -143,7 +143,6 @@ body {
   overflow-y: auto;
   position: relative; /* necessário pra o skeleton (abaixo) poder cobrir só esta tela */
   padding: 20px 16px 90px; /* 90px embaixo = espaço pro menu inferior não tampar o conteúdo */
-  animation: entrada 0.2s ease;
 
   /* Barra de rolagem fina, no Firefox */
   scrollbar-width: thin;
@@ -174,9 +173,27 @@ body {
   display: block;
 }
 
-@keyframes entrada {
-  from { opacity: 0; }
-  to { opacity: 1; }
+/*
+  Duas animações, uma pra cada direção. O JavaScript decide qual
+  classe (.anim-direita ou .anim-esquerda) colocar na tela, de
+  acordo com se você está "avançando" ou "voltando" nas abas.
+*/
+.anim-direita {
+  animation: entrada-pela-direita 0.25s ease;
+}
+
+.anim-esquerda {
+  animation: entrada-pela-esquerda 0.25s ease;
+}
+
+@keyframes entrada-pela-direita {
+  from { opacity: 0; transform: translateX(18px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes entrada-pela-esquerda {
+  from { opacity: 0; transform: translateX(-18px); }
+  to { opacity: 1; transform: translateX(0); }
 }
 
 /* ================================================
@@ -208,6 +225,15 @@ body {
   font-size: 16px;
   cursor: pointer;
   color: var(--cor-texto); /* botões não herdam a cor do texto sozinhos, por isso precisamos forçar aqui */
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.botao-icone:hover {
+  box-shadow: var(--sombra-card);
+}
+
+.botao-icone:active {
+  transform: scale(0.92);
 }
 
 /* ================================================
@@ -219,6 +245,20 @@ body {
   box-shadow: var(--sombra-card);
   padding: 18px;
   margin-bottom: 16px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+/* Leve "levantada" ao passar o mouse, só pra dar vida (toque/tap já
+   dispara o :active abaixo em celulares, que não têm hover de verdade) */
+.card:hover {
+  /* "levanta" o card visualmente (sobe 3px) + sombra bem mais forte,
+     pra ficar óbvio que ele reagiu ao mouse */
+  transform: translateY(-3px);
+  box-shadow: 0 10px 24px rgba(16, 24, 40, 0.18);
+}
+
+.card:active {
+  transform: scale(0.98);
 }
 
 .card-cabecalho {
@@ -502,6 +542,11 @@ body {
   color: var(--cor-texto-suave);
   cursor: pointer;
   font-family: inherit;
+  transition: transform 0.15s ease, color 0.15s ease;
+}
+
+.item-menu:active {
+  transform: scale(0.9);
 }
 
 .icone-menu {
@@ -511,6 +556,49 @@ body {
 .item-menu-ativo {
   color: var(--cor-primaria);
   font-weight: 600;
+}
+
+/*
+  Botão flutuante (FAB) de "novo lançamento". Fica "flutuando" por
+  cima do conteúdo, sempre no mesmo lugar, pra pessoa não precisar
+  rolar a tela até achar o botão normal. position: absolute aqui
+  funciona porque o .app-container (o "pai" dele) tem
+  position: relative.
+*/
+.botao-fab {
+  position: absolute;
+  right: 20px;
+  bottom: 86px; /* fica acima do menu inferior */
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--cor-primaria);
+  color: var(--cor-texto-inverso);
+  border: none;
+  font-size: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  z-index: 40;
+  transition: transform 0.15s ease, opacity 0.15s ease, visibility 0.15s ease;
+}
+
+.botao-fab:hover {
+  transform: scale(1.05);
+}
+
+.botao-fab:active {
+  transform: scale(0.92);
+}
+
+/* Escondido na tela de Planejamento (lá o FAB não faz sentido, não
+   tem lançamento pra adicionar por lá) e na tela de login. */
+.botao-fab-escondido {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 /* ================================================
@@ -728,6 +816,11 @@ html[data-privado="ativo"] .valor-sensivel {
   font-family: inherit;
   color: var(--cor-texto-suave);
   cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.aba:active {
+  transform: scale(0.94);
 }
 
 /* Estilo da aba selecionada no momento */
@@ -750,6 +843,18 @@ html[data-privado="ativo"] .valor-sensivel {
   font-family: inherit;
   cursor: pointer;
   margin-bottom: 20px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+
+.botao-primario:hover {
+  /* escurece o azul de verdade (em vez de só baixar a opacidade,
+     que quase não se percebe) */
+  filter: brightness(0.88);
+  box-shadow: 0 6px 14px rgba(47, 111, 237, 0.4);
+}
+
+.botao-primario:active {
+  transform: scale(0.97);
 }
 
 /* Título de cada grupo de data ("Hoje", "Ontem"...) */
@@ -775,6 +880,19 @@ html[data-privado="ativo"] .valor-sensivel {
   gap: 12px;
   padding: 14px 16px;
   border-bottom: 1px solid var(--cor-borda);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.lancamento:hover {
+  /* var(--cor-fundo) é quase igual ao branco do card, por isso o
+     efeito antigo era quase invisível. var(--cor-borda) é um cinza
+     mais forte, dá pra ver de verdade. */
+  background-color: var(--cor-borda);
+}
+
+.lancamento:active {
+  background-color: var(--cor-primaria-clara);
 }
 
 .lancamento:last-child {
@@ -826,6 +944,42 @@ html[data-privado="ativo"] .valor-sensivel {
 */
 .lancamento-escondido {
   display: none;
+}
+
+/*
+  Estado vazio: aparece quando não há nenhum lançamento pra mostrar
+  (seja porque a pessoa excluiu todos, seja porque o filtro escolhido
+  não bateu com nada). Por padrão fica escondido (display: none) — o
+  JavaScript é quem decide quando mostrar.
+*/
+.estado-vazio {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--cor-texto-suave);
+}
+
+.estado-vazio.estado-vazio-visivel {
+  display: flex;
+}
+
+.estado-vazio i {
+  font-size: 40px;
+  margin-bottom: 14px;
+  opacity: 0.6;
+}
+
+.estado-vazio p {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--cor-texto);
+  margin-bottom: 4px;
+}
+
+.estado-vazio span {
+  font-size: 13px;
 }
 
 /* ================================================
@@ -1011,6 +1165,7 @@ html[data-privado="ativo"] .valor-sensivel {
   font-size: 14px;
   font-family: inherit;
   background: var(--cor-fundo);
+  color: var(--cor-texto); /* inputs/selects não herdam a cor do texto sozinhos, igual os botões */
 }
 
 /* Botões "Receita" / "Despesa" pra escolher o tipo no formulário */

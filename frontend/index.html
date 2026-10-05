@@ -187,6 +187,15 @@
         <p class="legenda-donut">Economia</p>
       </div>
 
+      <!-- Card de evolução do saldo (gráfico de linha) -->
+      <div class="card">
+        <div class="card-cabecalho">
+          <h2 class="card-titulo">Evolução do saldo</h2>
+          <span class="rotulo">Últimos 7 dias</span>
+        </div>
+        <canvas id="grafico-evolucao-saldo" height="160"></canvas>
+      </div>
+
       <!-- Card de categorias de gastos -->
       <div class="card">
         <div class="card-cabecalho">
@@ -285,6 +294,15 @@
 
       <button class="botao-primario" id="botao-novo-lancamento">+ Novo lançamento</button>
 
+      <!--
+        Tudo que é lista de lançamento de verdade fica dentro desse
+        container. Assim, quando não sobrar nenhum lançamento (seja
+        porque excluiu tudo, seja porque o filtro não bateu com
+        nada), o JS esconde esse container inteiro de uma vez e
+        mostra a mensagem de "estado vazio" no lugar.
+      -->
+      <div id="container-lancamentos">
+
       <!-- Grupo do dia de hoje -->
       <p class="titulo-grupo-data">Hoje — 02/09/2025</p>
 
@@ -365,6 +383,16 @@
         </li>
       </ul>
 
+      </div>
+      <!-- fim do #container-lancamentos -->
+
+      <!-- Mensagem que aparece quando não há nenhum lançamento pra mostrar -->
+      <div class="estado-vazio" id="estado-vazio-lancamentos">
+        <i class="fa-solid fa-receipt"></i>
+        <p>Nenhum lançamento encontrado</p>
+        <span>Tente outro filtro ou toque em "+ Novo lançamento".</span>
+      </div>
+
     </section>
 
     <!-- ============================================= -->
@@ -382,7 +410,7 @@
 
       <header class="cabecalho">
         <h1 class="titulo-tela">Planejamento</h1>
-        <button class="botao-icone" id="botao-sair" aria-label="Sair da conta"><i class="fa-solid fa-gear"></i></button>
+        <button class="botao-icone" aria-label="Configurações"><i class="fa-solid fa-gear"></i></button>
       </header>
 
       <!-- Card de Metas financeiras -->
@@ -469,6 +497,23 @@
         </div>
       </div>
 
+      <!--
+        Card de Conta: mostra quem está logado e tem o botão de SAIR
+        bem visível (antes ele estava escondido atrás da engrenagem
+        lá em cima, o que confundia). Representa a tabela USUARIO
+        do DER — por enquanto só lê do localStorage, mas no dia que
+        existir back-end, é aqui que mostraria os dados reais.
+      -->
+      <div class="card">
+        <div class="card-cabecalho">
+          <h2 class="card-titulo">Conta</h2>
+        </div>
+        <p class="rotulo" style="margin-bottom: 14px;">
+          Logado como <strong id="texto-usuario-logado" class="valor-sensivel">—</strong>
+        </p>
+        <button class="botao-perigo botao-sair-trigger">Sair da conta</button>
+      </div>
+
     </section>
 
     <!-- ============================================= -->
@@ -493,6 +538,16 @@
         <span>Planejamento</span>
       </button>
     </nav>
+
+    <!--
+      Botão flutuante (FAB) de novo lançamento. Fica por cima de tudo,
+      sempre visível, pra pessoa não precisar rolar a tela até achar
+      o botão "+ Novo lançamento". O JS esconde ele na tela de
+      Planejamento (lá não tem lançamento pra adicionar).
+    -->
+    <button class="botao-fab" id="botao-fab-novo-lancamento" aria-label="Novo lançamento">
+      <i class="fa-solid fa-plus"></i>
+    </button>
 
     <!--
       ================================================

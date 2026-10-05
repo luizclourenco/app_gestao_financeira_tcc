@@ -17,13 +17,35 @@ const telas = document.querySelectorAll('.tela');
 // Quanto tempo o skeleton fica visível antes de "revelar" a tela de verdade
 const DURACAO_SKELETON_MS = 500;
 
+/*
+  Pra saber se a tela nova deve "deslizar" entrando da direita ou da
+  esquerda, precisamos saber a ORDEM das abas e qual estava ativa
+  antes. Ex: indo de Resumo (índice 0) pra Planejamento (índice 2),
+  o índice aumentou, então a entrada é "pela direita" — como se
+  estivesse avançando. Voltando pro Resumo, entra "pela esquerda".
+*/
+const ORDEM_DAS_TELAS = ['tela-resumo', 'tela-movimentacoes', 'tela-planejamento'];
+let indiceTelaAtual = 0; // Resumo é a tela inicial (índice 0)
+
 botoesMenu.forEach((botao) => {
   botao.addEventListener('click', () => {
     const idTelaEscolhida = botao.getAttribute('data-tela');
+    const indiceNovo = ORDEM_DAS_TELAS.indexOf(idTelaEscolhida);
+
+    if (indiceNovo === indiceTelaAtual) return; // já está nessa aba, não faz nada
+
+    const direcao = indiceNovo > indiceTelaAtual ? 'direita' : 'esquerda';
+    indiceTelaAtual = indiceNovo;
+
     const telaEscolhida = document.getElementById(idTelaEscolhida);
 
-    telas.forEach((tela) => tela.classList.remove('tela-ativa'));
-    telaEscolhida.classList.add('tela-ativa');
+    telas.forEach((tela) => tela.classList.remove('tela-ativa', 'anim-direita', 'anim-esquerda'));
+    telaEscolhida.classList.add('tela-ativa', `anim-${direcao}`);
+
+    // Sempre abre a aba nova "do zero", começando do topo — sem isso,
+    // se a pessoa tivesse rolado bem pra baixo na aba anterior, a
+    // aba nova já apareceria rolada também (fica estranho).
+    telaEscolhida.scrollTop = 0;
 
     // Mostra o skeleton assim que a tela aparece...
     telaEscolhida.classList.add('tela-carregando');
@@ -37,7 +59,27 @@ botoesMenu.forEach((botao) => {
 
     botoesMenu.forEach((b) => b.classList.remove('item-menu-ativo'));
     botao.classList.add('item-menu-ativo');
+
+    // O botão flutuante (FAB) só faz sentido nas telas de Resumo e
+    // Movimentações — na de Planejamento não tem lançamento pra criar.
+    botaoFab.classList.toggle('botao-fab-escondido', idTelaEscolhida === 'tela-planejamento');
   });
+});
+
+/*
+  ================================================
+  PARTE 1.5 - BOTÃO FLUTUANTE (FAB) DE NOVO LANÇAMENTO
+  ================================================
+
+  Em vez de duplicar toda a lógica de abrir o formulário, a gente só
+  "aperta" o botão normal de "+ Novo lançamento" por código quando o
+  FAB é clicado. Assim, os dois botões continuam fazendo exatamente
+  a mesma coisa, sem copiar e colar nada.
+*/
+const botaoFab = document.getElementById('botao-fab-novo-lancamento');
+
+botaoFab.addEventListener('click', () => {
+  document.getElementById('botao-novo-lancamento').click();
 });
 
 
@@ -87,6 +129,23 @@ botaoOlho.addEventListener('click', () => {
 */
 
 const abasFiltro = document.querySelectorAll('.aba');
+const containerLancamentos = document.getElementById('container-lancamentos');
+const estadoVazioLancamentos = document.getElementById('estado-vazio-lancamentos');
+
+/*
+  Estado vazio: olha quantos ".lancamento" estão realmente visíveis
+  (sem a classe "lancamento-escondido", que o filtro usa) e decide
+  se mostra a mensagem de "nenhum lançamento encontrado" ou a lista
+  normal. Chamamos essa função sempre que algo pode ter mudado a
+  quantidade de itens visíveis: trocar de filtro, excluir um
+  lançamento, adicionar um novo.
+*/
+function atualizarEstadoVazioLancamentos() {
+  const existemLancamentosVisiveis = document.querySelectorAll('.lancamento:not(.lancamento-escondido)').length > 0;
+
+  containerLancamentos.style.display = existemLancamentosVisiveis ? '' : 'none';
+  estadoVazioLancamentos.classList.toggle('estado-vazio-visivel', !existemLancamentosVisiveis);
+}
 
 abasFiltro.forEach((aba) => {
   aba.addEventListener('click', () => {
@@ -102,6 +161,8 @@ abasFiltro.forEach((aba) => {
 
       lancamento.classList.toggle('lancamento-escondido', !deveAparecer);
     });
+
+    atualizarEstadoVazioLancamentos();
   });
 });
 
@@ -340,6 +401,7 @@ function criarElementoLancamento(dados) {
 // Junta: cria o elemento na tela + atualiza os totais + (opcionalmente) salva
 function adicionarLancamento(dados, salvarNoLocalStorage) {
   criarElementoLancamento(dados);
+  atualizarEstadoVazioLancamentos(); // o item novo pode ter sido o primeiro da lista
 
   // "Fotografa" os valores atuais ANTES de mudar — é esse retrato que
   // vai ser o ponto de partida da animação dos números.
@@ -582,6 +644,7 @@ telaMovimentacoes.addEventListener('click', (evento) => {
 
     li.remove();
     atualizarResumoNaTela(estadoAntigo);
+    atualizarEstadoVazioLancamentos(); // pode ter sido o último item da lista
     fecharModal();
     mostrarToast('Lançamento excluído. 🗑️');
   });
@@ -665,9 +728,89 @@ function lerCorCSS(nomeVariavel) {
   return getComputedStyle(document.documentElement).getPropertyValue(nomeVariavel).trim();
 }
 
+/*
+  Gráfico de linha mostrando como o saldo foi mudando nos últimos
+  dias (dado de exemplo, já que ainda não temos histórico real
+  vindo de um back-end). Fica na Tela 1, visível direto — por isso,
+  diferente do gráfico de categorias, não espera um modal abrir;
+  ele já é desenhado assim que a página carrega.
+*/
+let instanciaGraficoEvolucao = null;
+
+const evolucaoSaldoExemplo = {
+  dias: ['Qui', 'Sex', 'Sáb', 'Dom', 'Seg', 'Ter', 'Hoje'],
+  valores: [3850, 4200, 3980, 4450, 4100, 4280, 4320],
+};
+
+function desenharGraficoEvolucaoSaldo() {
+  const canvas = document.getElementById('grafico-evolucao-saldo');
+  if (!canvas) return;
+
+  // Se o Chart.js não carregou (ex: sem internet, CDN bloqueado por
+  // firewall/adblock), "Chart" não existe. Em vez de travar o resto
+  // do app inteiro com um erro, a gente só desiste de desenhar esse
+  // gráfico específico e segue a vida.
+  if (typeof Chart === 'undefined') {
+    console.warn('Chart.js não carregou — gráfico de evolução não será exibido.');
+    return;
+  }
+
+  if (instanciaGraficoEvolucao) {
+    instanciaGraficoEvolucao.destroy();
+  }
+
+  const corPrimaria = lerCorCSS('--cor-primaria');
+  const corTextoSuave = lerCorCSS('--cor-texto-suave');
+  const corBorda = lerCorCSS('--cor-borda');
+
+  instanciaGraficoEvolucao = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels: evolucaoSaldoExemplo.dias,
+      datasets: [{
+        data: evolucaoSaldoExemplo.valores,
+        borderColor: corPrimaria,
+        backgroundColor: corPrimaria + '22', // mesma cor, só que com transparência (preenche embaixo da linha)
+        fill: true,
+        tension: 0.35, // deixa a linha curva, em vez de quebrada/angulosa
+        pointRadius: 3,
+        pointBackgroundColor: corPrimaria,
+      }],
+    },
+    options: {
+      plugins: {
+        legend: { display: false }, // só uma linha, não precisa de legenda
+      },
+      scales: {
+        x: {
+          ticks: { color: corTextoSuave, font: { size: 11 } },
+          grid: { display: false },
+        },
+        y: {
+          ticks: {
+            color: corTextoSuave,
+            font: { size: 11 },
+            callback: (valor) => 'R$ ' + valor, // mostra "R$ 4000" em vez de só "4000"
+          },
+          grid: { color: corBorda },
+        },
+      },
+    },
+  });
+}
+
+desenharGraficoEvolucaoSaldo();
+
 function desenharGraficoCategorias() {
   const canvas = document.getElementById('grafico-categorias');
   if (!canvas) return;
+
+  // Mesma proteção do gráfico de evolução: sem Chart.js carregado,
+  // não dá pra desenhar — mas isso não pode travar o resto do app.
+  if (typeof Chart === 'undefined') {
+    console.warn('Chart.js não carregou — gráfico de categorias não será exibido.');
+    return;
+  }
 
   if (instanciaGraficoCategorias) {
     instanciaGraficoCategorias.destroy();
@@ -786,6 +929,7 @@ if ('serviceWorker' in navigator) {
 const CHAVE_USUARIO = 'meu-bolso:usuario';
 const telaLogin = document.getElementById('tela-login');
 const textoSaudacao = document.getElementById('texto-saudacao');
+const textoUsuarioLogado = document.getElementById('texto-usuario-logado');
 
 // Troca de aba entre "Entrar" e "Criar conta"
 document.querySelectorAll('.auth-aba').forEach((aba) => {
@@ -801,9 +945,11 @@ document.querySelectorAll('.auth-aba').forEach((aba) => {
 });
 
 // Esconde a tela de login e mostra o app, já com o nome da pessoa
-function entrarNoApp(nome) {
+// em dois lugares: na saudação (Tela 1) e no card "Conta" (Tela 3)
+function entrarNoApp(nome, email) {
   telaLogin.classList.add('tela-auth-escondida');
   textoSaudacao.textContent = `Olá, ${nome}!`;
+  textoUsuarioLogado.textContent = email ? `${nome} (${email})` : nome;
 }
 
 // --- Formulário de login ---
@@ -819,7 +965,7 @@ document.getElementById('form-login').addEventListener('submit', (evento) => {
   const nome = (usuarioSalvo && usuarioSalvo.email === email) ? usuarioSalvo.nome : email.split('@')[0];
 
   localStorage.setItem(CHAVE_USUARIO, JSON.stringify({ nome, email }));
-  entrarNoApp(nome);
+  entrarNoApp(nome, email);
 });
 
 // --- Formulário de cadastro ---
@@ -831,29 +977,36 @@ document.getElementById('form-cadastro').addEventListener('submit', (evento) => 
   if (!nome || !email) return;
 
   localStorage.setItem(CHAVE_USUARIO, JSON.stringify({ nome, email }));
-  entrarNoApp(nome);
+  entrarNoApp(nome, email);
 });
 
-// --- Logout (botão de engrenagem na Tela 3) ---
-document.getElementById('botao-sair').addEventListener('click', () => {
-  localStorage.removeItem(CHAVE_USUARIO);
-  telaLogin.classList.remove('tela-auth-escondida');
+// --- Logout ---
+// Existem 2 botões de sair (um na Tela 1, outro no card "Conta" da
+// Tela 3). Em vez de um id único, os dois usam a MESMA classe
+// (.botao-sair-trigger), e aqui a gente escuta o clique nos dois de
+// uma vez com querySelectorAll — assim clicar em qualquer um dá logout.
+document.querySelectorAll('.botao-sair-trigger').forEach((botao) => {
+  botao.addEventListener('click', () => {
+    localStorage.removeItem(CHAVE_USUARIO);
+    telaLogin.classList.remove('tela-auth-escondida');
+    textoUsuarioLogado.textContent = '—';
 
-  // Volta pro formulário de login (caso tivesse ficado na aba de cadastro)
-  document.querySelector('[data-formulario="form-login"]').click();
+    // Volta pro formulário de login (caso tivesse ficado na aba de cadastro)
+    document.querySelector('[data-formulario="form-login"]').click();
 
-  // Some com os campos preenchidos, pra não ficar o e-mail/senha da pessoa anterior
-  document.getElementById('form-login').reset();
-  document.getElementById('form-cadastro').reset();
+    // Some com os campos preenchidos, pra não ficar o e-mail/senha da pessoa anterior
+    document.getElementById('form-login').reset();
+    document.getElementById('form-cadastro').reset();
 
-  // Volta pra Tela 1, pra da próxima vez que logar já abrir no Resumo
-  document.querySelector('[data-tela="tela-resumo"]').click();
+    // Volta pra Tela 1, pra da próxima vez que logar já abrir no Resumo
+    document.querySelector('[data-tela="tela-resumo"]').click();
+  });
 });
 
 // --- Ao carregar a página: se já tinha usuário salvo, pula o login ---
 const usuarioJaLogado = JSON.parse(localStorage.getItem(CHAVE_USUARIO));
 if (usuarioJaLogado) {
-  entrarNoApp(usuarioJaLogado.nome);
+  entrarNoApp(usuarioJaLogado.nome, usuarioJaLogado.email);
 }
 
 
@@ -885,6 +1038,11 @@ function aplicarTema(tema) {
   }
 
   localStorage.setItem(CHAVE_TEMA, tema);
+
+  // O Chart.js "fotografa" as cores do CSS no momento em que desenha —
+  // se não redesenhar aqui, o gráfico continuaria com as cores do tema
+  // anterior até a próxima troca de tela.
+  desenharGraficoEvolucaoSaldo();
 }
 
 // Ao carregar a página, usa o tema salvo antes (se existir).
