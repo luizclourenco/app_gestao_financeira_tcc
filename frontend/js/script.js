@@ -931,6 +931,28 @@ const telaLogin = document.getElementById('tela-login');
 const textoSaudacao = document.getElementById('texto-saudacao');
 const textoUsuarioLogado = document.getElementById('texto-usuario-logado');
 
+/*
+  Botão de "mostrar/esconder senha" (ícone de olho) nos campos de
+  login e cadastro. Mesma ideia do olho que já existe no card de
+  saldo: alterna o tipo do campo entre "password" (pontinhos) e
+  "text" (letras de verdade), e troca o ícone junto.
+
+  Usamos o atributo "data-campo-senha" pra cada botão saber QUAL
+  input ele controla (o de login ou o de cadastro), em vez de
+  precisar de uma função separada pra cada um.
+*/
+document.querySelectorAll('.botao-olho-senha').forEach((botao) => {
+  botao.addEventListener('click', () => {
+    const campoSenha = document.getElementById(botao.getAttribute('data-campo-senha'));
+    const icone = botao.querySelector('i');
+    const senhaEstaEscondida = campoSenha.type === 'password';
+
+    campoSenha.type = senhaEstaEscondida ? 'text' : 'password';
+    icone.classList.toggle('fa-eye', !senhaEstaEscondida);
+    icone.classList.toggle('fa-eye-slash', senhaEstaEscondida);
+  });
+});
+
 // Troca de aba entre "Entrar" e "Criar conta"
 document.querySelectorAll('.auth-aba').forEach((aba) => {
   aba.addEventListener('click', () => {

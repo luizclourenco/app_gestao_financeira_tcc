@@ -1168,6 +1168,43 @@ html[data-privado="ativo"] .valor-sensivel {
   color: var(--cor-texto); /* inputs/selects não herdam a cor do texto sozinhos, igual os botões */
 }
 
+/*
+  Campo de senha com botão de "olho" pra mostrar/esconder o que foi
+  digitado. position: relative aqui + position: absolute no botão é
+  o mesmo truque do FAB: o botão flutua DENTRO do campo de texto.
+*/
+.campo-senha {
+  position: relative;
+}
+
+.campo-senha input {
+  /* espaço extra à direita, pra o texto digitado não ficar escondido
+     atrás do botão do olho */
+  padding-right: 42px;
+}
+
+.botao-olho-senha {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 34px;
+  height: 34px;
+  background: none;
+  border: none;
+  color: var(--cor-texto-suave);
+  cursor: pointer;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease;
+}
+
+.botao-olho-senha:hover {
+  color: var(--cor-texto);
+}
+
 /* Botões "Receita" / "Despesa" pra escolher o tipo no formulário */
 .grupo-tipo {
   display: flex;
