@@ -53,6 +53,27 @@ html[data-tema="escuro"] {
 }
 
 /*
+  Tira aquele "quadrado" azul/preto que o navegador desenha em volta
+  de um botão depois que ele é clicado (o nome técnico é "contorno
+  de foco"). Só tiramos quando o foco veio do MOUSE/toque
+  (:focus:not(:focus-visible)) — se a pessoa estiver navegando pelo
+  teclado com Tab, o contorno continua aparecendo normalmente, o que
+  é importante pra acessibilidade.
+*/
+button:focus:not(:focus-visible),
+a:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Contorno customizado (mais discreto, na cor do app) pra quem usa
+   o teclado pra navegar, em vez do azul feio padrão do navegador */
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--cor-primaria);
+  outline-offset: 2px;
+}
+
+/*
   html e body com altura 100% + overflow hidden = a janela do
   navegador NÃO vai ter barra de rolagem própria. Quem vai rolar
   é só o conteúdo de dentro do "celular" (explicado mais abaixo).
@@ -144,23 +165,14 @@ body {
   position: relative; /* necessário pra o skeleton (abaixo) poder cobrir só esta tela */
   padding: 20px 16px 90px; /* 90px embaixo = espaço pro menu inferior não tampar o conteúdo */
 
-  /* Barra de rolagem fina, no Firefox */
-  scrollbar-width: thin;
-  scrollbar-color: var(--cor-borda) transparent;
+  /* Barra de rolagem invisível no Firefox (o "none" some com ela de
+     vez, mas o scroll com o mouse/toque continua funcionando normal) */
+  scrollbar-width: none;
 }
 
-/* Barra de rolagem fina, no Chrome/Edge/Safari (navegadores baseados em Webkit) */
+/* Barra de rolagem invisível no Chrome/Edge/Safari (baseados em Webkit) */
 .tela::-webkit-scrollbar {
-  width: 5px;
-}
-
-.tela::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.tela::-webkit-scrollbar-thumb {
-  background-color: var(--cor-borda);
-  border-radius: 10px;
+  display: none;
 }
 
 @media (min-width: 441px) {
@@ -707,6 +719,11 @@ html[data-privado="ativo"] .valor-sensivel {
   justify-content: center;
   padding: 32px 24px;
   overflow-y: auto;
+  scrollbar-width: none; /* esconde a barra de rolagem (Firefox) */
+}
+
+.tela-auth::-webkit-scrollbar {
+  display: none; /* esconde a barra de rolagem (Chrome/Edge/Safari) */
 }
 
 .tela-auth-escondida {
@@ -1126,6 +1143,11 @@ html[data-privado="ativo"] .valor-sensivel {
   padding: 20px;
   overflow-y: auto;
   animation: subir-modal 0.2s ease;
+  scrollbar-width: none; /* esconde a barra de rolagem (Firefox) */
+}
+
+.modal-caixa::-webkit-scrollbar {
+  display: none; /* esconde a barra de rolagem (Chrome/Edge/Safari) */
 }
 
 @keyframes subir-modal {
