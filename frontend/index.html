@@ -12,14 +12,20 @@
   <!-- PWA: diz ao navegador como o app pode ser "instalado" -->
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icons/icon.svg">
-  <meta name="theme-color" content="#2F6FED">
+  <meta name="theme-color" content="#7A3042">
 
   <!-- Ligando nosso arquivo de estilos -->
   <link rel="stylesheet" href="css/style.css">
 
   <!-- Fonte do Google Fonts (deixa o texto mais bonito que a fonte padrão) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!--
+    Duas fontes, dois papéis: Inter pra interface (textos, botões,
+    rótulos — precisa ser neutra e legível), e Fraunces pros números
+    grandes e títulos (uma serifada com mais personalidade, usada só
+    nos destaques pra não ficar pesada no app inteiro).
+  -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap" rel="stylesheet">
 
   <!-- Biblioteca de ícones (Font Awesome). Usamos as classes tipo "fa-house"
        no lugar de emojis — ficam nítidos em qualquer tamanho de tela e
@@ -52,6 +58,22 @@
         <div class="auth-logo"><i class="fa-solid fa-wallet"></i></div>
         <h1 class="auth-titulo">Meu Bolso</h1>
         <p class="auth-subtitulo">Controle financeiro simples e direto</p>
+
+        <!--
+          Seletor de esquema de cor. Cada botão troca a "identidade"
+          visual do app inteiro (data-esquema na tag <html>) — o
+          círculo colorido dentro de cada botão é só uma prévia
+          (não usa variável, porque é a cor de um esquema que talvez
+          nem esteja ativo no momento).
+        -->
+        <div class="seletor-esquema" role="group" aria-label="Escolha um tema de cor">
+          <button type="button" class="opcao-esquema" data-esquema="vinho" aria-label="Tema vinho">
+            <span class="amostra-esquema amostra-vinho"></span>
+          </button>
+          <button type="button" class="opcao-esquema" data-esquema="azul" aria-label="Tema azul">
+            <span class="amostra-esquema amostra-azul"></span>
+          </button>
+        </div>
 
         <div class="auth-abas">
           <button class="auth-aba auth-aba-ativa" data-formulario="form-login" type="button">Entrar</button>
@@ -220,56 +242,56 @@
 
         <ul class="lista-categorias">
           <li class="item-categoria">
-            <span class="icone-categoria"><i class="fa-solid fa-house"></i></span>
+            <span class="icone-categoria" data-cor="moradia"><i class="fa-solid fa-house"></i></span>
             <div class="info-categoria">
               <div class="linha-categoria-topo">
                 <span>Moradia</span>
                 <span class="valor-sensivel">R$ 650,00</span>
               </div>
               <div class="barra-progresso">
-                <div class="barra-progresso-preenchida" style="width: 33%;"></div>
+                <div class="barra-progresso-preenchida" data-cor="moradia" style="width: 33%;"></div>
               </div>
             </div>
             <span class="porcentagem-categoria valor-sensivel">33%</span>
           </li>
 
           <li class="item-categoria">
-            <span class="icone-categoria"><i class="fa-solid fa-cart-shopping"></i></span>
+            <span class="icone-categoria" data-cor="alimentacao"><i class="fa-solid fa-cart-shopping"></i></span>
             <div class="info-categoria">
               <div class="linha-categoria-topo">
                 <span>Alimentação</span>
                 <span class="valor-sensivel">R$ 420,00</span>
               </div>
               <div class="barra-progresso">
-                <div class="barra-progresso-preenchida" style="width: 22%;"></div>
+                <div class="barra-progresso-preenchida" data-cor="alimentacao" style="width: 22%;"></div>
               </div>
             </div>
             <span class="porcentagem-categoria valor-sensivel">22%</span>
           </li>
 
           <li class="item-categoria">
-            <span class="icone-categoria"><i class="fa-solid fa-car"></i></span>
+            <span class="icone-categoria" data-cor="transporte"><i class="fa-solid fa-car"></i></span>
             <div class="info-categoria">
               <div class="linha-categoria-topo">
                 <span>Transporte</span>
                 <span class="valor-sensivel">R$ 280,00</span>
               </div>
               <div class="barra-progresso">
-                <div class="barra-progresso-preenchida" style="width: 14%;"></div>
+                <div class="barra-progresso-preenchida" data-cor="transporte" style="width: 14%;"></div>
               </div>
             </div>
             <span class="porcentagem-categoria valor-sensivel">14%</span>
           </li>
 
           <li class="item-categoria">
-            <span class="icone-categoria"><i class="fa-solid fa-ellipsis"></i></span>
+            <span class="icone-categoria" data-cor="outros"><i class="fa-solid fa-ellipsis"></i></span>
             <div class="info-categoria">
               <div class="linha-categoria-topo">
                 <span>Outros</span>
                 <span class="valor-sensivel">R$ 580,00</span>
               </div>
               <div class="barra-progresso">
-                <div class="barra-progresso-preenchida" style="width: 31%;"></div>
+                <div class="barra-progresso-preenchida" data-cor="outros" style="width: 31%;"></div>
               </div>
             </div>
             <span class="porcentagem-categoria valor-sensivel">31%</span>
@@ -444,7 +466,7 @@
             </div>
             <span class="meta-valor-total valor-sensivel">Meta: R$ 10.000,00</span>
             <div class="barra-progresso">
-              <div class="barra-progresso-preenchida" style="width: 60%;"></div>
+              <div class="barra-progresso-preenchida" data-cor="meta" style="width: 60%;"></div>
             </div>
             <span class="meta-valor-atual valor-sensivel">R$ 6.000,00 / R$ 10.000,00</span>
           </div>
@@ -526,6 +548,17 @@
         <p class="rotulo" style="margin-bottom: 14px;">
           Logado como <strong id="texto-usuario-logado" class="valor-sensivel">—</strong>
         </p>
+
+        <p class="rotulo" style="margin-bottom: 8px;">Tema de cor</p>
+        <div class="seletor-esquema" role="group" aria-label="Escolha um tema de cor" style="margin-bottom: 18px;">
+          <button type="button" class="opcao-esquema" data-esquema="vinho" aria-label="Tema vinho">
+            <span class="amostra-esquema amostra-vinho"></span>
+          </button>
+          <button type="button" class="opcao-esquema" data-esquema="azul" aria-label="Tema azul">
+            <span class="amostra-esquema amostra-azul"></span>
+          </button>
+        </div>
+
         <button class="botao-perigo botao-sair-trigger">Sair da conta</button>
       </div>
 

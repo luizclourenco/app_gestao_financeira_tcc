@@ -663,10 +663,10 @@ telaMovimentacoes.addEventListener('click', (evento) => {
 */
 
 const categoriasExemplo = [
-  { nome: 'Moradia', valor: 650, porcentagem: 33, icone: 'fa-house' },
-  { nome: 'Alimentação', valor: 420, porcentagem: 22, icone: 'fa-cart-shopping' },
-  { nome: 'Transporte', valor: 280, porcentagem: 14, icone: 'fa-gas-pump' },
-  { nome: 'Outros', valor: 580, porcentagem: 31, icone: 'fa-ellipsis' },
+  { nome: 'Moradia', valor: 650, porcentagem: 33, icone: 'fa-house', cor: 'moradia' },
+  { nome: 'Alimentação', valor: 420, porcentagem: 22, icone: 'fa-cart-shopping', cor: 'alimentacao' },
+  { nome: 'Transporte', valor: 280, porcentagem: 14, icone: 'fa-gas-pump', cor: 'transporte' },
+  { nome: 'Outros', valor: 580, porcentagem: 31, icone: 'fa-ellipsis', cor: 'outros' },
 ];
 
 document.getElementById('link-ver-todas-categorias').addEventListener('click', (evento) => {
@@ -675,11 +675,11 @@ document.getElementById('link-ver-todas-categorias').addEventListener('click', (
   const htmlLista = categoriasExemplo.map((categoria) => `
     <div class="modal-lista-item">
       <div class="linha-categoria-topo">
-        <span><i class="fa-solid ${categoria.icone}"></i> ${categoria.nome}</span>
+        <span><span class="icone-categoria icone-categoria-inline" data-cor="${categoria.cor}"><i class="fa-solid ${categoria.icone}"></i></span> ${categoria.nome}</span>
         <span class="valor-sensivel">${formatarMoeda(categoria.valor)}</span>
       </div>
       <div class="barra-progresso">
-        <div class="barra-progresso-preenchida" style="width: ${categoria.porcentagem}%;"></div>
+        <div class="barra-progresso-preenchida" data-cor="${categoria.cor}" style="width: ${categoria.porcentagem}%;"></div>
       </div>
     </div>
   `).join('');
@@ -703,7 +703,7 @@ document.getElementById('link-ver-todas-metas').addEventListener('click', (event
         <span class="porcentagem-meta valor-sensivel">${meta.porcentagem}%</span>
       </div>
       <div class="barra-progresso">
-        <div class="barra-progresso-preenchida" style="width: ${meta.porcentagem}%;"></div>
+        <div class="barra-progresso-preenchida" data-cor="meta" style="width: ${meta.porcentagem}%;"></div>
       </div>
       <span class="meta-valor-atual valor-sensivel">${formatarMoeda(meta.atual)} / ${formatarMoeda(meta.meta)}</span>
     </div>
@@ -822,7 +822,10 @@ function desenharGraficoCategorias() {
       labels: categoriasExemplo.map((categoria) => categoria.nome),
       datasets: [{
         data: categoriasExemplo.map((categoria) => categoria.valor),
-        backgroundColor: ['#2F6FED', '#1AA260', '#F59E0B', '#9AA0AC'],
+        // Mesmas cores usadas nos ícones de categoria (CORES_POR_CATEGORIA),
+        // só que aqui precisam ser string de cor mesmo (o Chart.js não lê
+        // variável CSS direto) — por isso repetidas na mesma ordem.
+        backgroundColor: ['#BF6E4D', '#D9A23B', '#5B7A9D', '#9B9388'],
         borderColor: lerCorCSS('--cor-branco'),
         borderWidth: 3,
       }],
@@ -1030,6 +1033,47 @@ const usuarioJaLogado = JSON.parse(localStorage.getItem(CHAVE_USUARIO));
 if (usuarioJaLogado) {
   entrarNoApp(usuarioJaLogado.nome, usuarioJaLogado.email);
 }
+
+
+/*
+  ================================================
+  PARTE 9.5 - ESQUEMA DE COR (vinho / azul)
+  ================================================
+
+  Parecido com o tema claro/escuro, mas é um atributo DIFERENTE
+  (data-esquema) — os dois são independentes, então dá pra ter
+  "vinho escuro", "azul claro", etc. Existem botões seletores em
+  dois lugares (tela de login e card "Conta"), e os dois têm a
+  MESMA classe ".opcao-esquema", então um clique em QUALQUER um
+  dos dois funciona igual (e os dois conjuntos ficam sincronizados).
+*/
+
+const CHAVE_ESQUEMA = 'meu-bolso:esquema-cor';
+
+function aplicarEsquema(esquema) {
+  document.documentElement.setAttribute('data-esquema', esquema);
+  localStorage.setItem(CHAVE_ESQUEMA, esquema);
+
+  // Marca visualmente qual botão está selecionado, nos DOIS lugares
+  // onde o seletor aparece (login e Conta) ao mesmo tempo.
+  document.querySelectorAll('.opcao-esquema').forEach((botao) => {
+    botao.classList.toggle('opcao-esquema-ativa', botao.getAttribute('data-esquema') === esquema);
+  });
+}
+
+// Ao carregar a página, usa o esquema salvo antes (se existir).
+// Se a pessoa nunca escolheu, começa no "vinho" por padrão.
+const esquemaSalvoAnteriormente = localStorage.getItem(CHAVE_ESQUEMA) || 'vinho';
+aplicarEsquema(esquemaSalvoAnteriormente);
+
+document.querySelectorAll('.opcao-esquema').forEach((botao) => {
+  botao.addEventListener('click', () => {
+    aplicarEsquema(botao.getAttribute('data-esquema'));
+    // O gráfico "fotografa" as cores do CSS no momento em que desenha,
+    // então precisa redesenhar pra pegar a cor nova do esquema.
+    desenharGraficoEvolucaoSaldo();
+  });
+});
 
 
 /*

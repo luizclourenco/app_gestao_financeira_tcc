@@ -2,47 +2,105 @@
    VARIÁVEIS DE COR
    Deixamos as cores como "variáveis" (--nome) pra não
    ficar repetindo o código de cor em todo lugar.
-   Se quiser mudar a cor principal do app, muda só aqui.
+
+   Agora existem DOIS "eixos" independentes, controlados por dois
+   atributos na tag <html> (o JavaScript troca os dois):
+     - data-esquema="vinho" ou "azul"   → a IDENTIDADE de cor do app
+     - data-tema="claro" ou "escuro"    → claro/escuro, dentro de
+                                           qualquer esquema escolhido
+
+   Isso dá 4 combinações (vinho-claro, vinho-escuro, azul-claro,
+   azul-escuro), cada uma com seu próprio bloco de variáveis abaixo.
+   Só o dourado (metas), verde/vermelho (receita/despesa) e a fonte
+   continuam fixos — são cores "funcionais", não de identidade.
    ================================================ */
 :root {
-  --cor-primaria: #2F6FED;      /* azul principal (saldo, botões, ativo no menu) */
-  --cor-primaria-clara: #E8EFFD;
-  --cor-positiva: #1AA260;      /* verde - receitas */
-  --cor-positiva-fundo: #E7F7EF; /* fundo clarinho usado nos selos/ícones verdes */
-  --cor-negativa: #E5484D;      /* vermelho - despesas */
-  --cor-negativa-fundo: #FDEBEC; /* fundo clarinho usado nos selos/ícones vermelhos */
-  --cor-texto: #16181D;
-  --cor-texto-suave: #6B7280;
-  --cor-fundo: #F5F6FA;         /* fundo dos cards/inputs (não o branco puro) */
-  --cor-branco: #FFFFFF;        /* fundo dos cards */
-  --cor-borda: #EAECF0;
-  --cor-fundo-pagina: #E5E7EB;  /* fundo da "mesa" atrás do celular (fixo, não muda com o tema) */
-  --cor-texto-inverso: #FFFFFF; /* texto branco fixo, para usar em cima de fundo colorido (ex: botão azul) */
+  /* Cores que NÃO mudam com o esquema escolhido (são "funcionais",
+     não fazem parte da identidade visual de cada tema) */
+  --cor-acento: #C99A3E;           /* dourado — metas, conquistas, destaques especiais */
+  --cor-acento-fundo: #F6ECD6;
+  --cor-positiva: #2F9E6E;         /* verde - receitas */
+  --cor-positiva-fundo: #E6F4ED;
+  --cor-negativa: #B5473A;         /* terracota avermelhado - despesas */
+  --cor-negativa-fundo: #F8E9E6;
+  --cor-texto-inverso: #FFFFFF;    /* texto branco fixo, para usar em cima de fundo colorido */
+
+  --fonte-destaque: 'Fraunces', serif; /* usada só em números grandes e títulos — dá personalidade */
 
   --raio-card: 16px;
-  --sombra-card: 0 1px 3px rgba(16, 24, 40, 0.06), 0 1px 2px rgba(16, 24, 40, 0.04);
+  --sombra-card: 0 1px 3px rgba(27, 36, 24, 0.07), 0 1px 2px rgba(27, 36, 24, 0.05);
 }
 
 /*
-  TEMA ESCURO
-  Quando o JavaScript coloca data-tema="escuro" na tag <html>,
-  essas variáveis substituem as de cima. Repare que são as
-  MESMAS variáveis, só com valores diferentes — por isso o resto
-  do CSS inteiro não precisa mudar nada, ele já usa var(--cor-x)
-  em tudo e se adapta sozinho.
+  ESQUEMA "VINHO" (claro) — o padrão, usado se nenhum atributo
+  data-esquema ainda foi definido (primeiro acesso de alguém).
+  Remete a couro de carteira, por isso o nome do app "Meu Bolso".
+*/
+:root,
+html[data-esquema="vinho"] {
+  --cor-primaria: #7A3042;
+  --cor-primaria-escura: #4A1D28;  /* usado no gradiente do card de saldo */
+  --cor-primaria-clara: #F3E1E3;
+  --cor-texto: #231A1C;            /* preto levemente avinhado, não preto puro */
+  --cor-texto-suave: #786A6C;
+  --cor-fundo: #F7F2EC;            /* bege clarinho — fundo dos cards/inputs */
+  --cor-branco: #FFFDF9;           /* branco levemente quente — fundo dos cards */
+  --cor-borda: #E9E0DC;
+  --cor-fundo-pagina: #E5DFD8;     /* fundo da "mesa" atrás do celular (fixo, não muda com o tema) */
+}
+
+/* ESQUEMA "VINHO" (escuro) */
+html[data-esquema="vinho"][data-tema="escuro"] {
+  --cor-primaria: #A6465A;
+  --cor-primaria-escura: #4A1D28;
+  --cor-primaria-clara: #3A1E24;
+  --cor-texto: #F0EAE8;
+  --cor-texto-suave: #A89A98;
+  --cor-fundo: #1E1517;
+  --cor-branco: #271A1D;
+  --cor-borda: #3C2C2F;
+}
+
+/*
+  ESQUEMA "AZUL" (claro) — uma identidade bem diferente da vinho:
+  azul-marinho profundo (mais sóbrio que o azul genérico de app
+  corporativo) sobre um fundo frio neutro, em vez do bege quente.
+*/
+html[data-esquema="azul"] {
+  --cor-primaria: #2A4D7A;
+  --cor-primaria-escura: #152A47;
+  --cor-primaria-clara: #DCE6F2;
+  --cor-texto: #1A2430;
+  --cor-texto-suave: #5F6B7A;
+  --cor-fundo: #F2F4F8;
+  --cor-branco: #FFFFFF;
+  --cor-borda: #E1E6ED;
+  --cor-fundo-pagina: #DDE2EA;
+}
+
+/* ESQUEMA "AZUL" (escuro) */
+html[data-esquema="azul"][data-tema="escuro"] {
+  --cor-primaria: #4D7AB8;
+  --cor-primaria-escura: #152A47;
+  --cor-primaria-clara: #1C2C3E;
+  --cor-texto: #EBEEF2;
+  --cor-texto-suave: #98A3B0;
+  --cor-fundo: #11161D;
+  --cor-branco: #182230;
+  --cor-borda: #28323F;
+}
+
+/*
+  O dourado/verde/vermelho também precisam de uma versão mais
+  escura de fundo no modo escuro (não dependem do esquema, só do
+  tema claro/escuro) — por isso ficam num bloco à parte, pelo
+  atributo data-tema sozinho.
 */
 html[data-tema="escuro"] {
-  --cor-primaria-clara: #1C2B4D;
-  --cor-positiva-fundo: #103824;
-  --cor-negativa-fundo: #3D1619;
-  --cor-texto: #F2F3F5;
-  --cor-texto-suave: #9AA0AC;
-  --cor-fundo: #22242B;         /* fundo dos cards/inputs no escuro */
-  --cor-branco: #1A1C22;        /* fundo dos cards no escuro (nome ficou "branco" mas agora é escuro) */
-  --cor-borda: #33353D;
-  /* --cor-fundo-pagina não é redefinida aqui de propósito:
-     o fundo "atrás do celular" continua sempre cinza claro,
-     só o conteúdo de DENTRO do app muda de cor. */
+  --cor-acento: #D9AE5C;
+  --cor-acento-fundo: #3A2F18;
+  --cor-positiva-fundo: #163024;
+  --cor-negativa-fundo: #3A1E18;
 }
 
 /* Reset básico: tira margens e paddings padrão do navegador */
@@ -224,8 +282,9 @@ body {
 }
 
 .titulo-tela {
-  font-size: 22px;
-  font-weight: 700;
+  font-family: var(--fonte-destaque);
+  font-size: 24px;
+  font-weight: 600;
 }
 
 .botao-icone {
@@ -300,7 +359,7 @@ body {
    CARD DE SALDO
    ================================================ */
 .card-saldo {
-  background: linear-gradient(135deg, var(--cor-primaria), #1E4FBF);
+  background: linear-gradient(135deg, var(--cor-primaria), var(--cor-primaria-escura));
   color: var(--cor-texto-inverso);
 }
 
@@ -321,8 +380,9 @@ body {
 }
 
 .valor-saldo {
-  font-size: 30px;
-  font-weight: 700;
+  font-family: var(--fonte-destaque);
+  font-size: 34px;
+  font-weight: 600;
   margin-bottom: 4px;
 }
 
@@ -496,6 +556,48 @@ body {
   font-size: 16px;
   flex-shrink: 0;
 }
+
+/* Versão pequena, usada inline dentro de texto (modal "Ver todas") */
+.icone-categoria-inline {
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  font-size: 11px;
+  display: inline-flex;
+  vertical-align: middle;
+  margin-right: 2px;
+}
+
+/*
+  Cada categoria tem sua própria cor (em vez de todas usarem o
+  mesmo azul/verde genérico) — ajuda a reconhecer cada uma de
+  relance, sem precisar ler o texto. As cores do modo escuro usam
+  os mesmos tons, só mais escuros/dessaturados no fundo e mais
+  claros no ícone, pra manter contraste legível nos dois temas.
+*/
+.icone-categoria[data-cor="moradia"] { background: #F3E4DB; color: #A85A39; }
+.icone-categoria[data-cor="alimentacao"] { background: #F7E9CE; color: #B9802A; }
+.icone-categoria[data-cor="transporte"] { background: #E2E9F0; color: #44617F; }
+.icone-categoria[data-cor="lazer"] { background: #EDE3F3; color: #7450A0; }
+.icone-categoria[data-cor="saude"] { background: #DCF0EC; color: #2E7E72; }
+.icone-categoria[data-cor="outros"] { background: #EAE7E0; color: #7D7468; }
+
+html[data-tema="escuro"] .icone-categoria[data-cor="moradia"] { background: #3A2A20; color: #E0A17D; }
+html[data-tema="escuro"] .icone-categoria[data-cor="alimentacao"] { background: #3D3115; color: #E8C27A; }
+html[data-tema="escuro"] .icone-categoria[data-cor="transporte"] { background: #212E3A; color: #9DBAD6; }
+html[data-tema="escuro"] .icone-categoria[data-cor="lazer"] { background: #2D2238; color: #C6A8E0; }
+html[data-tema="escuro"] .icone-categoria[data-cor="saude"] { background: #15322C; color: #7FD1C0; }
+html[data-tema="escuro"] .icone-categoria[data-cor="outros"] { background: #2E2B24; color: #BDB6A8; }
+
+/* Barrinha de progresso de cada categoria usa a mesma cor do ícone,
+   em vez do azul/verde genérico padrão */
+.barra-progresso-preenchida[data-cor="moradia"] { background: #BF6E4D; }
+.barra-progresso-preenchida[data-cor="alimentacao"] { background: #D9A23B; }
+.barra-progresso-preenchida[data-cor="transporte"] { background: #5B7A9D; }
+.barra-progresso-preenchida[data-cor="lazer"] { background: #8C6BAE; }
+.barra-progresso-preenchida[data-cor="saude"] { background: #3E9C8F; }
+.barra-progresso-preenchida[data-cor="outros"] { background: #9B9388; }
+.barra-progresso-preenchida[data-cor="meta"] { background: var(--cor-acento); }
 
 .info-categoria {
   flex: 1;
@@ -749,9 +851,10 @@ html[data-privado="ativo"] .valor-sensivel {
 }
 
 .auth-titulo {
+  font-family: var(--fonte-destaque);
   text-align: center;
-  font-size: 22px;
-  font-weight: 700;
+  font-size: 26px;
+  font-weight: 600;
 }
 
 .auth-subtitulo {
@@ -762,6 +865,54 @@ html[data-privado="ativo"] .valor-sensivel {
 }
 
 /* Abas "Entrar" / "Criar conta" */
+/*
+  Seletor de esquema de cor: um grupo de botões circulares, cada um
+  mostrando uma prévia da cor daquele tema. O selecionado ganha um
+  anel ao redor (igual um "radio button" visual).
+*/
+.seletor-esquema {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.opcao-esquema {
+  background: none;
+  border: none;
+  padding: 3px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.opcao-esquema:active {
+  transform: scale(0.92);
+}
+
+.opcao-esquema-ativa {
+  border-color: var(--cor-texto-suave);
+}
+
+.amostra-esquema {
+  display: block;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+}
+
+/* Cores fixas (não usam variável) — são a PRÉVIA de cada esquema,
+   então precisam mostrar a cor de verdade mesmo que esse esquema
+   não esteja ativo agora */
+.amostra-vinho {
+  background: linear-gradient(135deg, #7A3042, #4A1D28);
+}
+
+.amostra-azul {
+  background: linear-gradient(135deg, #2A4D7A, #152A47);
+}
+
 .auth-abas {
   display: flex;
   gap: 8px;
@@ -867,7 +1018,7 @@ html[data-privado="ativo"] .valor-sensivel {
   /* escurece o azul de verdade (em vez de só baixar a opacidade,
      que quase não se percebe) */
   filter: brightness(0.88);
-  box-shadow: 0 6px 14px rgba(47, 111, 237, 0.4);
+  box-shadow: 0 6px 14px rgba(122, 48, 66, 0.4);
 }
 
 .botao-primario:active {
@@ -1012,7 +1163,10 @@ html[data-privado="ativo"] .valor-sensivel {
 .icone-meta {
   width: 44px;
   height: 44px;
-  background: var(--cor-primaria-clara);
+  /* Dourado em vez do verde padrão — metas são "conquistas", têm uma
+     cor só delas, diferente do verde usado pra orçamento/saldo */
+  background: var(--cor-acento-fundo);
+  color: var(--cor-acento);
   border-radius: 12px;
   display: flex;
   align-items: center;
@@ -1034,7 +1188,7 @@ html[data-privado="ativo"] .valor-sensivel {
 }
 
 .porcentagem-meta {
-  color: var(--cor-primaria);
+  color: var(--cor-acento);
   font-weight: 700;
   font-size: 13px;
 }
