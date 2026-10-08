@@ -998,6 +998,32 @@ html[data-privado="ativo"] .valor-sensivel {
   font-weight: 600;
 }
 
+/* Campo de busca por descrição (tela de Movimentações) */
+.barra-busca {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--cor-branco);
+  border: 1px solid var(--cor-borda);
+  border-radius: 12px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  color: var(--cor-texto-suave);
+}
+
+.barra-busca input {
+  flex: 1;
+  border: none;
+  background: none;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--cor-texto);
+}
+
+.barra-busca input:focus {
+  outline: none;
+}
+
 /* Botão azul grande de "+ Novo lançamento" */
 .botao-primario {
   width: 100%;
@@ -1242,6 +1268,153 @@ html[data-privado="ativo"] .valor-sensivel {
   color: var(--cor-texto-suave);
   margin-top: 4px;
   line-height: 1.4;
+}
+
+/* Checkbox "Repetir todo mês" no formulário de novo lançamento */
+.opcao-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--cor-texto);
+  cursor: pointer;
+}
+
+.opcao-checkbox input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--cor-primaria);
+}
+
+/* Selo pequeno indicando que um lançamento é recorrente */
+.icone-recorrente {
+  color: var(--cor-texto-suave);
+  font-size: 11px;
+  margin-left: 6px;
+}
+
+/* ================================================
+   LIMITES POR CATEGORIA (card "Planejamento")
+   ================================================ */
+.linha-orcamento-categoria {
+  margin-bottom: 18px;
+}
+
+.linha-orcamento-categoria:last-child {
+  margin-bottom: 0;
+}
+
+.linha-orcamento-categoria-topo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.nome-orcamento-categoria {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.valor-gasto-categoria {
+  font-size: 13px;
+}
+
+.linha-orcamento-categoria-rodape {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 6px;
+}
+
+.editar-limite {
+  font-size: 12px;
+  color: var(--cor-texto-suave);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.campo-limite-categoria {
+  width: 64px;
+  border: 1px solid var(--cor-borda);
+  border-radius: 6px;
+  padding: 3px 6px;
+  font-size: 12px;
+  font-family: inherit;
+  background: var(--cor-fundo);
+  color: var(--cor-texto);
+}
+
+/* Barra fica amarela quando perto do limite, e vermelha quando passa */
+.barra-progresso-preenchida.barra-progresso-alerta {
+  background: #D9A23B;
+}
+
+.barra-progresso-preenchida.barra-progresso-estourada {
+  background: var(--cor-negativa);
+}
+
+/* ================================================
+   LANÇAMENTOS RECORRENTES (card "Planejamento")
+   ================================================ */
+.botao-sem-borda {
+  border: none;
+  background: none;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.item-recorrente {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--cor-borda);
+  font-size: 13px;
+}
+
+.item-recorrente:last-child {
+  border-bottom: none;
+}
+
+.info-item-recorrente {
+  display: flex;
+  flex-direction: column;
+}
+
+.info-item-recorrente span {
+  font-size: 12px;
+  color: var(--cor-texto-suave);
+}
+
+.botao-excluir-recorrente {
+  border: none;
+  background: none;
+  color: var(--cor-texto-suave);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 6px;
+  transition: color 0.15s ease;
+}
+
+.botao-excluir-recorrente:hover {
+  color: var(--cor-negativa);
+}
+
+.estado-vazio-recorrentes {
+  display: none;
+  font-size: 12px;
+  color: var(--cor-texto-suave);
+  line-height: 1.4;
+  text-align: center;
+  padding: 8px 0;
+}
+
+.estado-vazio-recorrentes.estado-vazio-recorrentes-visivel {
+  display: block;
 }
 
 /* Grade com os 3 atalhos de relatório */

@@ -323,6 +323,12 @@
         Cada botão tem um "data-filtro" que o JS vai usar pra saber
         o que mostrar ou esconder. O valor "todas" mostra tudo.
       -->
+      <!-- Campo de busca por descrição, funciona junto com as abas de filtro -->
+      <div class="barra-busca">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input type="search" id="campo-busca-lancamentos" placeholder="Buscar por descrição...">
+      </div>
+
       <div class="abas-filtro">
         <button class="aba aba-ativa" data-filtro="todas">Todas</button>
         <button class="aba" data-filtro="receita">Receitas</button>
@@ -500,6 +506,26 @@
         <div class="barra-progresso" style="margin-top: 10px;">
           <div class="barra-progresso-preenchida barra-progresso-verde" style="width: 38%;"></div>
         </div>
+      </div>
+
+      <!-- Card de Limites por categoria (orçamento mensal) -->
+      <div class="card">
+        <div class="card-cabecalho">
+          <h2 class="card-titulo">Limites por categoria</h2>
+        </div>
+        <div id="lista-orcamento-categorias"></div>
+      </div>
+
+      <!-- Card de Lançamentos recorrentes -->
+      <div class="card">
+        <div class="card-cabecalho">
+          <h2 class="card-titulo">Lançamentos recorrentes</h2>
+          <button type="button" class="link-ver-todas botao-sem-borda" id="botao-simular-mes">Simular próximo mês ⏭</button>
+        </div>
+        <div id="lista-recorrentes"></div>
+        <p class="estado-vazio-recorrentes" id="estado-vazio-recorrentes">
+          Nenhum lançamento recorrente ainda. Marque "Repetir todo mês" ao criar um lançamento.
+        </p>
       </div>
 
       <!-- Card de Dica -->

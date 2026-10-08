@@ -131,6 +131,7 @@ botaoOlho.addEventListener('click', () => {
 const abasFiltro = document.querySelectorAll('.aba');
 const containerLancamentos = document.getElementById('container-lancamentos');
 const estadoVazioLancamentos = document.getElementById('estado-vazio-lancamentos');
+const campoBuscaLancamentos = document.getElementById('campo-busca-lancamentos');
 
 /*
   Estado vazio: olha quantos ".lancamento" estão realmente visíveis
@@ -147,24 +148,40 @@ function atualizarEstadoVazioLancamentos() {
   estadoVazioLancamentos.classList.toggle('estado-vazio-visivel', !existemLancamentosVisiveis);
 }
 
+/*
+  Junta os dois filtros num lugar só: a aba escolhida (Todas/Receitas/
+  Despesas) E o texto digitado na busca. Um lançamento só aparece se
+  passar nos DOIS ao mesmo tempo. Chamamos essa função sempre que
+  qualquer um dos dois critérios pode ter mudado — clique na aba,
+  digitação na busca, ou um lançamento novo sendo criado/editado.
+*/
+function aplicarFiltrosMovimentacoes() {
+  const filtroEscolhido = document.querySelector('.aba-ativa').getAttribute('data-filtro');
+  const termoBusca = campoBuscaLancamentos.value.trim().toLowerCase();
+  const listaAtual = document.querySelectorAll('.lancamento'); // busca atualizada!
+
+  listaAtual.forEach((lancamento) => {
+    const tipoDoLancamento = lancamento.getAttribute('data-tipo');
+    const descricaoLancamento = lancamento.querySelector('.info-lancamento strong').textContent.toLowerCase();
+
+    const passaFiltroTipo = (filtroEscolhido === 'todas') || (filtroEscolhido === tipoDoLancamento);
+    const passaBusca = termoBusca === '' || descricaoLancamento.includes(termoBusca);
+
+    lancamento.classList.toggle('lancamento-escondido', !(passaFiltroTipo && passaBusca));
+  });
+
+  atualizarEstadoVazioLancamentos();
+}
+
 abasFiltro.forEach((aba) => {
   aba.addEventListener('click', () => {
     abasFiltro.forEach((a) => a.classList.remove('aba-ativa'));
     aba.classList.add('aba-ativa');
-
-    const filtroEscolhido = aba.getAttribute('data-filtro');
-    const listaAtual = document.querySelectorAll('.lancamento'); // busca atualizada!
-
-    listaAtual.forEach((lancamento) => {
-      const tipoDoLancamento = lancamento.getAttribute('data-tipo');
-      const deveAparecer = (filtroEscolhido === 'todas') || (filtroEscolhido === tipoDoLancamento);
-
-      lancamento.classList.toggle('lancamento-escondido', !deveAparecer);
-    });
-
-    atualizarEstadoVazioLancamentos();
+    aplicarFiltrosMovimentacoes();
   });
 });
+
+campoBuscaLancamentos.addEventListener('input', aplicarFiltrosMovimentacoes);
 
 
 /*
@@ -347,6 +364,243 @@ function mostrarToast(mensagem) {
 
 /*
   ================================================
+  PARTE 6.5 - LIMITES DE ORÇAMENTO POR CATEGORIA
+  ================================================
+
+  Cada categoria de despesa pode ter um limite mensal definido pela
+  pessoa (ex: "Alimentação: R$ 500"). Guardamos esses limites num
+  objeto simples no localStorage — só {categoria: valorLimite}.
+
+  O "gasto atual" de cada categoria não é guardado separado: a gente
+  sempre RECALCULA ele na hora, somando os lançamentos de despesa que
+  já estão na tela. Assim nunca fica desatualizado, nem precisa
+  lembrar de atualizar em dois lugares toda vez que algo muda.
+*/
+
+const CHAVE_LIMITES_CATEGORIA = 'meu-bolso:limites-categoria';
+
+// Valores sugeridos pra quem nunca configurou nada ainda
+const limitesPadrao = {
+  'Moradia': 700,
+  'Alimentação': 500,
+  'Transporte': 300,
+  'Lazer': 200,
+  'Saúde': 200,
+  'Outros': 300,
+};
+
+const CATEGORIAS_DE_DESPESA = ['Moradia', 'Alimentação', 'Transporte', 'Lazer', 'Saúde', 'Outros'];
+
+// Mesmas cores já usadas nos ícones/barrinhas de categoria da Tela 1
+const corPorCategoria = {
+  'Moradia': 'moradia',
+  'Alimentação': 'alimentacao',
+  'Transporte': 'transporte',
+  'Lazer': 'lazer',
+  'Saúde': 'saude',
+  'Outros': 'outros',
+};
+
+function obterLimitesCategoria() {
+  const limitesSalvos = JSON.parse(localStorage.getItem(CHAVE_LIMITES_CATEGORIA)) || {};
+  return { ...limitesPadrao, ...limitesSalvos };
+}
+
+function salvarLimiteCategoria(categoria, novoLimite) {
+  const limites = obterLimitesCategoria();
+  limites[categoria] = novoLimite;
+  localStorage.setItem(CHAVE_LIMITES_CATEGORIA, JSON.stringify(limites));
+}
+
+// Soma todos os lançamentos de despesa já exibidos na tela que
+// pertencem a uma categoria específica
+function calcularGastoPorCategoria(categoria) {
+  let total = 0;
+
+  document.querySelectorAll('.lancamento[data-tipo="despesa"]').forEach((item) => {
+    const categoriaDoItem = item.querySelector('.categoria-lancamento').textContent;
+    if (categoriaDoItem === categoria) {
+      total += paraNumero(item.querySelector('.valor-negativo').textContent);
+    }
+  });
+
+  return total;
+}
+
+const listaOrcamentoCategorias = document.getElementById('lista-orcamento-categorias');
+
+// Redesenha o card inteiro de "Limites por categoria", com a barra de
+// progresso de cada uma já na cor certa (normal / alerta / estourado)
+function renderizarOrcamentoPorCategoria() {
+  const limites = obterLimitesCategoria();
+
+  listaOrcamentoCategorias.innerHTML = CATEGORIAS_DE_DESPESA.map((categoria) => {
+    const gasto = calcularGastoPorCategoria(categoria);
+    const limite = limites[categoria] || 0;
+    const porcentagem = limite > 0 ? Math.round((gasto / limite) * 100) : 0;
+    const estourou = limite > 0 && gasto > limite;
+    const quaseEstourando = !estourou && porcentagem >= 80;
+
+    let classeBarra = '';
+    if (estourou) classeBarra = 'barra-progresso-estourada';
+    else if (quaseEstourando) classeBarra = 'barra-progresso-alerta';
+
+    return `
+      <div class="linha-orcamento-categoria">
+        <div class="linha-orcamento-categoria-topo">
+          <span class="icone-categoria icone-categoria-inline" data-cor="${corPorCategoria[categoria]}">
+            <i class="fa-solid ${iconesPorCategoria[categoria]}"></i>
+          </span>
+          <span class="nome-orcamento-categoria">${categoria}</span>
+          <span class="valor-sensivel valor-gasto-categoria ${estourou ? 'valor-negativo' : ''}">${formatarMoeda(gasto)}</span>
+        </div>
+        <div class="barra-progresso">
+          <div class="barra-progresso-preenchida ${classeBarra}" data-cor="${corPorCategoria[categoria]}" style="width: ${Math.min(porcentagem, 100)}%;"></div>
+        </div>
+        <div class="linha-orcamento-categoria-rodape">
+          <span class="rotulo">${porcentagem}% usado</span>
+          <label class="editar-limite">
+            Limite: R$
+            <input type="number" min="0" step="10" value="${limite}" data-categoria="${categoria}" class="campo-limite-categoria">
+          </label>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// Quando a pessoa muda o valor do limite de uma categoria, salva e
+// repinta tudo (a barra pode mudar de cor na hora, por exemplo)
+listaOrcamentoCategorias.addEventListener('change', (evento) => {
+  if (!evento.target.classList.contains('campo-limite-categoria')) return;
+
+  const categoria = evento.target.getAttribute('data-categoria');
+  const novoLimite = parseFloat(evento.target.value) || 0;
+
+  salvarLimiteCategoria(categoria, novoLimite);
+  renderizarOrcamentoPorCategoria();
+});
+
+// Verifica se uma categoria passou do limite e, se sim, devolve o
+// texto do aviso (ou null se estiver tudo normal). Usado na hora de
+// criar um lançamento novo, pra avisar a pessoa na hora.
+function verificarLimiteExcedido(categoria) {
+  const limites = obterLimitesCategoria();
+  const limite = limites[categoria] || 0;
+  const gastoAtual = calcularGastoPorCategoria(categoria);
+
+  if (limite > 0 && gastoAtual > limite) {
+    return `⚠️ Você passou do limite de ${categoria} (${formatarMoeda(limite)})`;
+  }
+  return null;
+}
+
+
+/*
+  ================================================
+  PARTE 6.6 - LANÇAMENTOS RECORRENTES
+  ================================================
+
+  Uma "regra recorrente" é só um molde (tipo, descrição, categoria,
+  valor) guardado separado dos lançamentos do mês. Ela não aparece
+  na lista de Movimentações por si só — só quando a pessoa aperta
+  "Simular próximo mês" (ou, no mundo real com back-end, quando o
+  servidor detecta que virou o mês) é que um lançamento de verdade é
+  criado a partir dela.
+*/
+
+const CHAVE_RECORRENTES = 'meu-bolso:lancamentos-recorrentes';
+const listaRecorrentesElemento = document.getElementById('lista-recorrentes');
+const estadoVazioRecorrentes = document.getElementById('estado-vazio-recorrentes');
+
+function obterRegrasRecorrentes() {
+  return JSON.parse(localStorage.getItem(CHAVE_RECORRENTES)) || [];
+}
+
+function salvarRegrasRecorrentes(regras) {
+  localStorage.setItem(CHAVE_RECORRENTES, JSON.stringify(regras));
+}
+
+// Guarda uma nova regra (chamada quando a pessoa marca "Repetir
+// todo mês" ao criar um lançamento)
+function registrarRegraRecorrente(regra) {
+  const regras = obterRegrasRecorrentes();
+  regras.push({ ...regra, id: Date.now() });
+  salvarRegrasRecorrentes(regras);
+  renderizarRecorrentes();
+}
+
+function renderizarRecorrentes() {
+  const regras = obterRegrasRecorrentes();
+
+  estadoVazioRecorrentes.classList.toggle('estado-vazio-recorrentes-visivel', regras.length === 0);
+
+  listaRecorrentesElemento.innerHTML = regras.map((regra) => {
+    const nomeIcone = iconesPorCategoria[regra.categoria] || 'fa-ellipsis';
+    const prefixoValor = regra.tipo === 'receita' ? '' : '- ';
+
+    return `
+      <div class="item-recorrente">
+        <div class="info-item-recorrente">
+          <strong><i class="fa-solid ${nomeIcone}"></i> ${regra.descricao}</strong>
+          <span>${regra.categoria} · ${prefixoValor}${formatarMoeda(regra.valor)} / mês</span>
+        </div>
+        <button type="button" class="botao-excluir-recorrente" data-id="${regra.id}" aria-label="Parar de repetir">
+          <i class="fa-solid fa-trash"></i>
+        </button>
+      </div>
+    `;
+  }).join('');
+}
+
+// OBS: a primeira chamada de renderizarRecorrentes() (e também de
+// renderizarOrcamentoPorCategoria()) só acontece mais abaixo, depois
+// que iconesPorCategoria existir (ele é usado lá dentro) — ver o
+// final da PARTE 7.
+
+// Delegação de evento: clicar no "lixeirinha" de qualquer regra
+// (antigas ou criadas depois) remove ela da lista
+listaRecorrentesElemento.addEventListener('click', (evento) => {
+  const botao = evento.target.closest('.botao-excluir-recorrente');
+  if (!botao) return;
+
+  const idParaRemover = Number(botao.getAttribute('data-id'));
+  const regras = obterRegrasRecorrentes().filter((regra) => regra.id !== idParaRemover);
+
+  salvarRegrasRecorrentes(regras);
+  renderizarRecorrentes();
+  mostrarToast('Lançamento recorrente removido.');
+});
+
+// Botão "Simular próximo mês": gera, de uma vez, um lançamento novo
+// pra cada regra recorrente cadastrada. Como o app ainda não tem
+// back-end nem data real avançando sozinha, esse botão existe pra
+// mostrar a lógica funcionando sem precisar esperar um mês de
+// verdade passar.
+document.getElementById('botao-simular-mes').addEventListener('click', () => {
+  const regras = obterRegrasRecorrentes();
+
+  if (regras.length === 0) {
+    mostrarToast('Nenhum lançamento recorrente cadastrado ainda.');
+    return;
+  }
+
+  regras.forEach((regra) => {
+    adicionarLancamento({
+      tipo: regra.tipo,
+      descricao: regra.descricao,
+      categoria: regra.categoria,
+      valor: regra.valor,
+      recorrente: true,
+    }, true);
+  });
+
+  mostrarToast(`${regras.length} lançamento(s) recorrente(s) gerado(s) para o próximo mês! 🔁`);
+});
+
+
+/*
+  ================================================
   PARTE 7 - NOVO LANÇAMENTO (formulário + salvar + listar)
   ================================================
 */
@@ -379,10 +633,17 @@ function construirNoLancamento(dados) {
   const classeValor = dados.tipo === 'receita' ? 'valor-positivo' : 'valor-negativo';
   const prefixoValor = dados.tipo === 'receita' ? '' : '- ';
 
+  // Selo de "recorrente" (ícone de repetir) ao lado da descrição,
+  // só pra deixar claro de relance que esse lançamento se repete
+  // todo mês sozinho, sem precisar abrir ele pra descobrir.
+  const seloRecorrente = dados.recorrente
+    ? '<i class="fa-solid fa-rotate icone-recorrente" title="Lançamento recorrente"></i>'
+    : '';
+
   item.innerHTML = `
     <span class="icone-lancamento ${classeIcone}"><i class="fa-solid ${nomeIcone}"></i></span>
     <div class="info-lancamento">
-      <strong>${dados.descricao}</strong>
+      <strong>${dados.descricao}${seloRecorrente}</strong>
       <span class="categoria-lancamento">${dados.categoria}</span>
     </div>
     <strong class="${classeValor} valor-sensivel">${prefixoValor}${formatarMoeda(dados.valor)}</strong>
@@ -401,7 +662,7 @@ function criarElementoLancamento(dados) {
 // Junta: cria o elemento na tela + atualiza os totais + (opcionalmente) salva
 function adicionarLancamento(dados, salvarNoLocalStorage) {
   criarElementoLancamento(dados);
-  atualizarEstadoVazioLancamentos(); // o item novo pode ter sido o primeiro da lista
+  aplicarFiltrosMovimentacoes(); // o item novo precisa respeitar o filtro/busca atual
 
   // "Fotografa" os valores atuais ANTES de mudar — é esse retrato que
   // vai ser o ponto de partida da animação dos números.
@@ -413,6 +674,12 @@ function adicionarLancamento(dados, salvarNoLocalStorage) {
     estadoFinanceiro.despesas += dados.valor;
   }
   atualizarResumoNaTela(estadoAntigo);
+
+  // Limites de orçamento só fazem sentido pra despesas (não tem
+  // "limite de receita"), então só repintamos o card nesse caso.
+  if (dados.tipo === 'despesa') {
+    renderizarOrcamentoPorCategoria();
+  }
 
   if (salvarNoLocalStorage) {
     const lancamentosSalvos = JSON.parse(localStorage.getItem(CHAVE_LOCALSTORAGE)) || [];
@@ -459,6 +726,13 @@ function htmlFormularioNovoLancamento() {
         <input type="number" id="campo-valor" placeholder="0,00" step="0.01" min="0.01" required>
       </div>
 
+      <div class="campo-formulario">
+        <label class="opcao-checkbox">
+          <input type="checkbox" id="campo-recorrente">
+          <span><i class="fa-solid fa-rotate"></i> Repetir esse lançamento todo mês</span>
+        </label>
+      </div>
+
       <button type="submit" class="botao-primario">Salvar lançamento</button>
     </form>
   `;
@@ -476,15 +750,26 @@ document.getElementById('botao-novo-lancamento').addEventListener('click', () =>
     const descricao = document.getElementById('campo-descricao').value.trim();
     const categoria = tipoEscolhido === 'receita' ? 'Receita' : document.getElementById('campo-categoria').value;
     const valor = parseFloat(document.getElementById('campo-valor').value);
+    const recorrente = document.getElementById('campo-recorrente').checked;
 
     if (!descricao || !valor || valor <= 0) {
       mostrarToast('Preencha descrição e valor corretamente.');
       return;
     }
 
-    adicionarLancamento({ tipo: tipoEscolhido, descricao, categoria, valor }, true);
+    adicionarLancamento({ tipo: tipoEscolhido, descricao, categoria, valor, recorrente }, true);
+
+    if (recorrente) {
+      registrarRegraRecorrente({ tipo: tipoEscolhido, descricao, categoria, valor });
+    }
+
     fecharModal();
-    mostrarToast('Lançamento adicionado! 🎉');
+
+    // Se esse lançamento fez a categoria passar do limite definido, o
+    // aviso de orçamento é mais importante que o toast de sucesso comum
+    // — por isso ele toma o lugar do "Lançamento adicionado!" nesse caso.
+    const avisoDeLimite = tipoEscolhido === 'despesa' ? verificarLimiteExcedido(categoria) : null;
+    mostrarToast(avisoDeLimite || 'Lançamento adicionado! 🎉');
   });
 });
 
@@ -495,6 +780,12 @@ function carregarLancamentosSalvos() {
 }
 
 carregarLancamentosSalvos();
+
+// Primeira pintura dos cards de orçamento/recorrentes, já com os
+// lançamentos carregados acima (precisa vir depois de
+// iconesPorCategoria existir, por isso só aqui e não na PARTE 6.5/6.6)
+renderizarOrcamentoPorCategoria();
+renderizarRecorrentes();
 
 
 /*
@@ -571,6 +862,7 @@ telaMovimentacoes.addEventListener('click', (evento) => {
     descricao: li.querySelector('.info-lancamento strong').textContent,
     categoria: li.querySelector('.categoria-lancamento').textContent,
     valor: paraNumero(li.querySelector('.valor-positivo, .valor-negativo').textContent),
+    recorrente: li.querySelector('.icone-recorrente') !== null,
   };
 
   abrirModal('Editar lançamento', htmlFormularioEditarLancamento(dadosAtuais));
@@ -612,10 +904,13 @@ telaMovimentacoes.addEventListener('click', (evento) => {
       descricao: descricaoNova,
       categoria: categoriaNova,
       valor: valorNovo,
+      recorrente: dadosAtuais.recorrente,
     });
     li.replaceWith(noAtualizado);
 
     atualizarResumoNaTela(estadoAntigo);
+    renderizarOrcamentoPorCategoria();
+    aplicarFiltrosMovimentacoes();
     fecharModal();
     mostrarToast('Lançamento atualizado! ✏️');
   });
@@ -644,6 +939,7 @@ telaMovimentacoes.addEventListener('click', (evento) => {
 
     li.remove();
     atualizarResumoNaTela(estadoAntigo);
+    renderizarOrcamentoPorCategoria();
     atualizarEstadoVazioLancamentos(); // pode ter sido o último item da lista
     fecharModal();
     mostrarToast('Lançamento excluído. 🗑️');
