@@ -305,6 +305,10 @@ function atualizarResumoNaTela(estadoAntigo) {
 
   // Gráfico donut
   animarDonut(economiaAntiga, economiaNova);
+
+  // Gráfico de evolução do saldo (Ontem/Hoje mudam com os lançamentos
+  // de verdade, então precisa redesenhar toda vez que algo muda)
+  desenharGraficoEvolucaoSaldo();
 }
 
 
@@ -983,30 +987,258 @@ document.getElementById('link-ver-todas-categorias').addEventListener('click', (
   abrirModal('Todas as categorias', htmlLista);
 });
 
-const metasExemplo = [
-  { nome: 'Reserva de Emergência', meta: 10000, atual: 6000, porcentagem: 60, icone: 'fa-piggy-bank' },
-  { nome: 'Viagem para a praia', meta: 3000, atual: 900, porcentagem: 30, icone: 'fa-umbrella-beach' },
-  { nome: 'Notebook novo', meta: 5000, atual: 4000, porcentagem: 80, icone: 'fa-laptop' },
+/*
+  ================================================
+  METAS FINANCEIRAS (criar / editar / excluir)
+  ================================================
+
+  Antes só existia UMA meta, fixa no HTML. Agora as metas viram dados
+  de verdade: um array guardado no localStorage, que a pessoa pode
+  criar, editar e excluir — igual já fizemos com lançamentos e
+  lançamentos recorrentes. A primeira meta do array é a que aparece
+  em destaque no card da Tela 3; todas aparecem no modal "Ver todas".
+*/
+
+const CHAVE_METAS = 'meu-bolso:metas';
+
+// Usado só na primeira visita (quando ainda não existe nada salvo),
+// pra o card não aparecer vazio antes da pessoa criar a dela mesma
+const metasPadrao = [
+  { id: 1, nome: 'Reserva de Emergência', meta: 10000, atual: 6000, icone: 'fa-piggy-bank' },
+  { id: 2, nome: 'Viagem para a praia', meta: 3000, atual: 900, icone: 'fa-umbrella-beach' },
+  { id: 3, nome: 'Notebook novo', meta: 5000, atual: 4000, icone: 'fa-laptop' },
 ];
+
+function obterMetas() {
+  const metasSalvas = localStorage.getItem(CHAVE_METAS);
+
+  if (metasSalvas === null) {
+    // Primeira vez: semeia com os exemplos e já salva, pra próxima
+    // visita ler os mesmos dados (inclusive se a pessoa editar algo)
+    localStorage.setItem(CHAVE_METAS, JSON.stringify(metasPadrao));
+    return metasPadrao;
+  }
+
+  return JSON.parse(metasSalvas);
+}
+
+function salvarMetas(metas) {
+  localStorage.setItem(CHAVE_METAS, JSON.stringify(metas));
+}
+
+const containerMetaPrincipal = document.getElementById('container-meta-principal');
+
+// Repinta o card de destaque (Tela 3) com a PRIMEIRA meta do array,
+// ou um aviso de "nenhuma meta ainda" se a lista estiver vazia
+function renderizarMetaPrincipal() {
+  const metas = obterMetas();
+  const metaDestaque = metas[0];
+
+  if (!metaDestaque) {
+    containerMetaPrincipal.innerHTML = `
+      <div class="estado-vazio-meta">
+        <p>Nenhuma meta criada ainda</p>
+        <span>Toque no "+" ali em cima pra criar a primeira.</span>
+      </div>
+    `;
+    return;
+  }
+
+  const porcentagem = metaDestaque.meta > 0
+    ? Math.min(Math.round((metaDestaque.atual / metaDestaque.meta) * 100), 100)
+    : 0;
+
+  containerMetaPrincipal.innerHTML = `
+    <div class="meta" data-meta-id="${metaDestaque.id}">
+      <span class="icone-meta"><i class="fa-solid ${metaDestaque.icone}"></i></span>
+      <div class="info-meta">
+        <div class="linha-meta-topo">
+          <strong>${metaDestaque.nome}</strong>
+          <span class="porcentagem-meta valor-sensivel">${porcentagem}%</span>
+        </div>
+        <span class="meta-valor-total valor-sensivel">Meta: ${formatarMoeda(metaDestaque.meta)}</span>
+        <div class="barra-progresso">
+          <div class="barra-progresso-preenchida" data-cor="meta" style="width: ${porcentagem}%;"></div>
+        </div>
+        <span class="meta-valor-atual valor-sensivel">${formatarMoeda(metaDestaque.atual)} / ${formatarMoeda(metaDestaque.meta)}</span>
+      </div>
+    </div>
+  `;
+}
+
+// Clicar na meta em destaque abre ela pra edição (mesma ideia de
+// clicar num lançamento) — delegação de evento pro elemento existir
+// mesmo depois de renderizarMetaPrincipal() recriar o HTML de dentro
+containerMetaPrincipal.addEventListener('click', (evento) => {
+  const elementoMeta = evento.target.closest('.meta');
+  if (!elementoMeta) return;
+
+  const id = Number(elementoMeta.getAttribute('data-meta-id'));
+  const metaSelecionada = obterMetas().find((meta) => meta.id === id);
+  if (metaSelecionada) abrirFormularioMeta(metaSelecionada);
+});
+
+// Monta o <select> de ícones disponíveis, já marcando o atual como
+// selecionado quando é uma edição
+function htmlOpcoesIconeMeta(iconeAtual) {
+  const opcoes = [
+    ['fa-piggy-bank', '🐷 Poupança / Reserva'],
+    ['fa-umbrella-beach', '🏖️ Viagem'],
+    ['fa-laptop', '💻 Eletrônico'],
+    ['fa-car', '🚗 Carro'],
+    ['fa-house', '🏠 Casa'],
+    ['fa-graduation-cap', '🎓 Estudos'],
+    ['fa-gift', '🎁 Presente'],
+  ];
+
+  return opcoes
+    .map(([valor, texto]) => `<option value="${valor}" ${valor === iconeAtual ? 'selected' : ''}>${texto}</option>`)
+    .join('');
+}
+
+// Formulário reaproveitado tanto pra criar quanto pra editar — se
+// "metaExistente" vier null, é criação (campos em branco, sem botão
+// de excluir); se vier com dados, é edição (campos preenchidos)
+function htmlFormularioMeta(metaExistente) {
+  const nome = metaExistente ? metaExistente.nome : '';
+  const valorMeta = metaExistente ? metaExistente.meta : '';
+  const valorAtual = metaExistente ? metaExistente.atual : '';
+  const icone = metaExistente ? metaExistente.icone : 'fa-piggy-bank';
+
+  return `
+    <form id="form-meta">
+      <div class="campo-formulario">
+        <label for="campo-meta-nome">Nome da meta</label>
+        <input type="text" id="campo-meta-nome" value="${nome}" placeholder="Ex: Viagem para a praia" required>
+      </div>
+
+      <div class="campo-formulario">
+        <label for="campo-meta-icone">Ícone</label>
+        <select id="campo-meta-icone">${htmlOpcoesIconeMeta(icone)}</select>
+      </div>
+
+      <div class="campo-formulario">
+        <label for="campo-meta-valor-total">Valor da meta (R$)</label>
+        <input type="number" id="campo-meta-valor-total" value="${valorMeta}" step="0.01" min="0.01" required>
+      </div>
+
+      <div class="campo-formulario">
+        <label for="campo-meta-valor-atual">Quanto já guardou (R$)</label>
+        <input type="number" id="campo-meta-valor-atual" value="${valorAtual}" step="0.01" min="0" required>
+      </div>
+
+      <button type="submit" class="botao-primario">Salvar meta</button>
+      ${metaExistente ? '<button type="button" class="botao-perigo" id="botao-excluir-meta">Excluir meta</button>' : ''}
+    </form>
+  `;
+}
+
+// Abre o modal genérico com o formulário de meta (criação ou edição)
+// e liga os eventos de salvar/excluir — chamada tanto pelo "+" do
+// card quanto pelo clique numa meta (destaque ou na lista "Ver todas")
+function abrirFormularioMeta(metaExistente) {
+  abrirModal(metaExistente ? 'Editar meta' : 'Nova meta', htmlFormularioMeta(metaExistente));
+
+  document.getElementById('form-meta').addEventListener('submit', (evento) => {
+    evento.preventDefault();
+
+    const nome = document.getElementById('campo-meta-nome').value.trim();
+    const icone = document.getElementById('campo-meta-icone').value;
+    const valorMeta = parseFloat(document.getElementById('campo-meta-valor-total').value);
+    const valorAtual = parseFloat(document.getElementById('campo-meta-valor-atual').value);
+
+    if (!nome || !valorMeta || valorMeta <= 0 || isNaN(valorAtual) || valorAtual < 0) {
+      mostrarToast('Preencha os campos da meta corretamente.');
+      return;
+    }
+
+    const metas = obterMetas();
+
+    if (metaExistente) {
+      const indice = metas.findIndex((meta) => meta.id === metaExistente.id);
+      metas[indice] = { ...metaExistente, nome, icone, meta: valorMeta, atual: valorAtual };
+    } else {
+      metas.push({ id: Date.now(), nome, icone, meta: valorMeta, atual: valorAtual });
+    }
+
+    salvarMetas(metas);
+    renderizarMetaPrincipal();
+    fecharModal();
+    mostrarToast(metaExistente ? 'Meta atualizada! ✏️' : 'Meta criada! 🎯');
+  });
+
+  if (!metaExistente) return;
+
+  // Excluir meta (confirmação com segundo clique, igual lançamentos)
+  const botaoExcluirMeta = document.getElementById('botao-excluir-meta');
+  let aguardandoConfirmacaoMeta = false;
+
+  botaoExcluirMeta.addEventListener('click', () => {
+    if (!aguardandoConfirmacaoMeta) {
+      aguardandoConfirmacaoMeta = true;
+      botaoExcluirMeta.textContent = 'Clique de novo para confirmar';
+      botaoExcluirMeta.classList.add('botao-perigo-confirmando');
+      return;
+    }
+
+    const metas = obterMetas().filter((meta) => meta.id !== metaExistente.id);
+    salvarMetas(metas);
+    renderizarMetaPrincipal();
+    fecharModal();
+    mostrarToast('Meta excluída. 🗑️');
+  });
+}
+
+document.getElementById('botao-nova-meta').addEventListener('click', () => abrirFormularioMeta(null));
+
+// Monta o HTML de TODAS as metas pro modal "Ver todas" — cada linha é
+// clicável e abre a mesma edição usada pela meta em destaque
+function htmlListaTodasMetas() {
+  const metas = obterMetas();
+
+  if (metas.length === 0) {
+    return `
+      <div class="estado-vazio-meta">
+        <p>Nenhuma meta criada ainda</p>
+        <span>Toque no "+" do card "Metas financeiras" pra criar a primeira.</span>
+      </div>
+    `;
+  }
+
+  return metas.map((meta) => {
+    const porcentagem = meta.meta > 0 ? Math.min(Math.round((meta.atual / meta.meta) * 100), 100) : 0;
+
+    return `
+      <div class="modal-lista-item" data-meta-id="${meta.id}" style="cursor: pointer;">
+        <div class="linha-meta-topo">
+          <strong><i class="fa-solid ${meta.icone}"></i> ${meta.nome}</strong>
+          <span class="porcentagem-meta valor-sensivel">${porcentagem}%</span>
+        </div>
+        <div class="barra-progresso">
+          <div class="barra-progresso-preenchida" data-cor="meta" style="width: ${porcentagem}%;"></div>
+        </div>
+        <span class="meta-valor-atual valor-sensivel">${formatarMoeda(meta.atual)} / ${formatarMoeda(meta.meta)}</span>
+      </div>
+    `;
+  }).join('');
+}
 
 document.getElementById('link-ver-todas-metas').addEventListener('click', (evento) => {
   evento.preventDefault();
+  abrirModal('Todas as metas', htmlListaTodasMetas());
 
-  const htmlLista = metasExemplo.map((meta) => `
-    <div class="modal-lista-item">
-      <div class="linha-meta-topo">
-        <strong><i class="fa-solid ${meta.icone}"></i> ${meta.nome}</strong>
-        <span class="porcentagem-meta valor-sensivel">${meta.porcentagem}%</span>
-      </div>
-      <div class="barra-progresso">
-        <div class="barra-progresso-preenchida" data-cor="meta" style="width: ${meta.porcentagem}%;"></div>
-      </div>
-      <span class="meta-valor-atual valor-sensivel">${formatarMoeda(meta.atual)} / ${formatarMoeda(meta.meta)}</span>
-    </div>
-  `).join('');
-
-  abrirModal('Todas as metas', htmlLista);
+  // Liga o clique em cada linha DEPOIS de inserir o HTML no modal
+  // (os elementos só existem a partir daqui)
+  document.querySelectorAll('.modal-lista-item[data-meta-id]').forEach((item) => {
+    item.addEventListener('click', () => {
+      const id = Number(item.getAttribute('data-meta-id'));
+      const metaSelecionada = obterMetas().find((meta) => meta.id === id);
+      if (metaSelecionada) abrirFormularioMeta(metaSelecionada);
+    });
+  });
 });
+
+renderizarMetaPrincipal();
 
 /*
   Gráfico de pizza/rosca de verdade pras categorias, usando a
@@ -1033,10 +1265,50 @@ function lerCorCSS(nomeVariavel) {
 */
 let instanciaGraficoEvolucao = null;
 
+/*
+  Como o app não tem back-end com histórico de datas de verdade, os
+  5 primeiros pontos continuam sendo "dados de antes" fixos (dias que
+  nem existem na tela de Movimentações). Só os 2 últimos pontos
+  ("Ontem" e "Hoje") são calculados de verdade, a partir da soma dos
+  lançamentos que realmente estão nas listas #lista-ontem e
+  #lista-hoje — então se a pessoa adicionar, editar ou excluir um
+  lançamento, o gráfico muda junto.
+*/
 const evolucaoSaldoExemplo = {
-  dias: ['Qui', 'Sex', 'Sáb', 'Dom', 'Seg', 'Ter', 'Hoje'],
-  valores: [3850, 4200, 3980, 4450, 4100, 4280, 4320],
+  dias: ['Qui', 'Sex', 'Sáb', 'Dom', 'Seg'],
+  valores: [3850, 4200, 3980, 4450, 4100],
 };
+
+// Soma (receita soma, despesa subtrai) todos os ".lancamento" que
+// estão DENTRO de uma lista específica (ex: só os de "Ontem")
+function calcularSaldoDeUmaLista(elementoLista) {
+  let total = 0;
+
+  if (!elementoLista) return total;
+
+  elementoLista.querySelectorAll('.lancamento').forEach((item) => {
+    const tipo = item.getAttribute('data-tipo');
+    const valor = paraNumero(item.querySelector('.valor-positivo, .valor-negativo').textContent);
+    total += tipo === 'receita' ? valor : -valor;
+  });
+
+  return total;
+}
+
+// Pega os 5 pontos fixos de exemplo e completa com os 2 pontos reais
+// (Ontem e Hoje), calculados em cima do saldo de partida (último
+// ponto fixo) + o que realmente está lançado em cada dia
+function calcularEvolucaoSaldo() {
+  const saldoDeReferencia = evolucaoSaldoExemplo.valores[evolucaoSaldoExemplo.valores.length - 1];
+
+  const saldoOntem = saldoDeReferencia + calcularSaldoDeUmaLista(document.getElementById('lista-ontem'));
+  const saldoHoje = saldoOntem + calcularSaldoDeUmaLista(listaHoje);
+
+  return {
+    dias: [...evolucaoSaldoExemplo.dias, 'Ontem', 'Hoje'],
+    valores: [...evolucaoSaldoExemplo.valores, saldoOntem, saldoHoje],
+  };
+}
 
 function desenharGraficoEvolucaoSaldo() {
   const canvas = document.getElementById('grafico-evolucao-saldo');
@@ -1058,13 +1330,14 @@ function desenharGraficoEvolucaoSaldo() {
   const corPrimaria = lerCorCSS('--cor-primaria');
   const corTextoSuave = lerCorCSS('--cor-texto-suave');
   const corBorda = lerCorCSS('--cor-borda');
+  const evolucao = calcularEvolucaoSaldo();
 
   instanciaGraficoEvolucao = new Chart(canvas, {
     type: 'line',
     data: {
-      labels: evolucaoSaldoExemplo.dias,
+      labels: evolucao.dias,
       datasets: [{
-        data: evolucaoSaldoExemplo.valores,
+        data: evolucao.valores,
         borderColor: corPrimaria,
         backgroundColor: corPrimaria + '22', // mesma cor, só que com transparência (preenche embaixo da linha)
         fill: true,

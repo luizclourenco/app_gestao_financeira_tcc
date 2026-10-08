@@ -394,7 +394,7 @@
       <!-- Grupo do dia de ontem -->
       <p class="titulo-grupo-data">Ontem — 01/09/2025</p>
 
-      <ul class="lista-lancamentos">
+      <ul class="lista-lancamentos" id="lista-ontem">
         <li class="lancamento" data-tipo="despesa">
           <span class="icone-lancamento icone-despesa"><i class="fa-solid fa-utensils"></i></span>
           <div class="info-lancamento">
@@ -460,23 +460,19 @@
       <div class="card">
         <div class="card-cabecalho">
           <h2 class="card-titulo">Metas financeiras</h2>
-          <a href="#" class="link-ver-todas" id="link-ver-todas-metas">Ver todas</a>
-        </div>
-
-        <div class="meta">
-          <span class="icone-meta"><i class="fa-solid fa-piggy-bank"></i></span>
-          <div class="info-meta">
-            <div class="linha-meta-topo">
-              <strong>Reserva de Emergência</strong>
-              <span class="porcentagem-meta valor-sensivel">60%</span>
-            </div>
-            <span class="meta-valor-total valor-sensivel">Meta: R$ 10.000,00</span>
-            <div class="barra-progresso">
-              <div class="barra-progresso-preenchida" data-cor="meta" style="width: 60%;"></div>
-            </div>
-            <span class="meta-valor-atual valor-sensivel">R$ 6.000,00 / R$ 10.000,00</span>
+          <div class="acoes-card-titulo">
+            <button type="button" class="botao-icone botao-icone-pequeno" id="botao-nova-meta" aria-label="Nova meta"><i class="fa-solid fa-plus"></i></button>
+            <a href="#" class="link-ver-todas" id="link-ver-todas-metas">Ver todas</a>
           </div>
         </div>
+
+        <!--
+          O conteúdo aqui dentro é todo gerado via JavaScript agora
+          (função renderizarMetaPrincipal), porque as metas deixaram
+          de ser fixas no HTML — a pessoa pode criar, editar e
+          excluir quantas quiser, tudo salvo no localStorage.
+        -->
+        <div id="container-meta-principal"></div>
       </div>
 
       <!-- Card de Orçamento do mês -->

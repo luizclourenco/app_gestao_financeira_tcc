@@ -1630,3 +1630,57 @@ html[data-privado="ativo"] .valor-sensivel {
   display: flex;
   gap: 8px;
 }
+
+/* Agrupa o botão "+" com o link "Ver todas", em cards que têm os dois
+   (ex: Metas financeiras) */
+.acoes-card-titulo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Versão menor do botão-ícone padrão, pra caber ao lado de um link
+   de texto sem dominar o cabeçalho do card */
+.botao-icone-pequeno {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+/* A meta em destaque agora é clicável (abre edição), igual um
+   lançamento — por isso ganha o mesmo tipo de reação ao toque */
+.meta {
+  cursor: pointer;
+  border-radius: 12px;
+  padding: 6px;
+  margin: -6px;
+  transition: background-color 0.15s ease;
+}
+
+.meta:hover {
+  background-color: var(--cor-fundo);
+}
+
+.meta:active {
+  background-color: var(--cor-primaria-clara);
+}
+
+/* Estado vazio compacto, usado dentro do card de Metas quando a
+   pessoa ainda não criou nenhuma */
+.estado-vazio-meta {
+  text-align: center;
+  padding: 20px 10px;
+  color: var(--cor-texto-suave);
+}
+
+.estado-vazio-meta p {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--cor-texto);
+  margin-bottom: 4px;
+}
+
+.estado-vazio-meta span {
+  font-size: 13px;
+}
