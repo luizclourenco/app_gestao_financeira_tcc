@@ -567,9 +567,18 @@
         <div class="card-cabecalho">
           <h2 class="card-titulo">Conta</h2>
         </div>
-        <p class="rotulo" style="margin-bottom: 14px;">
-          Logado como <strong id="texto-usuario-logado" class="valor-sensivel">—</strong>
-        </p>
+        <!--
+          Avatar com a inicial do nome (estilo Gmail/Google), em vez
+          de só um texto puro — dá mais cara de "produto de verdade".
+          O JS troca a letra e o nome/e-mail toda vez que loga.
+        -->
+        <div class="perfil-conta">
+          <span class="avatar-usuario" id="avatar-usuario">?</span>
+          <div class="info-perfil-conta">
+            <strong id="texto-usuario-logado" class="valor-sensivel">—</strong>
+            <span class="rotulo">Conta conectada</span>
+          </div>
+        </div>
 
         <p class="rotulo" style="margin-bottom: 8px;">Tema de cor</p>
         <div class="seletor-esquema" role="group" aria-label="Escolha um tema de cor" style="margin-bottom: 18px;">

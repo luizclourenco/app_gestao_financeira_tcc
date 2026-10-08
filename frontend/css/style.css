@@ -782,6 +782,40 @@ html[data-privado="ativo"] .valor-sensivel {
   user-select: none; /* impede de selecionar/copiar o texto borrado */
 }
 
+/* Linha de perfil no card "Conta": avatar + nome/e-mail */
+.perfil-conta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.avatar-usuario {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--cor-primaria);
+  color: var(--cor-texto-inverso);
+  font-family: var(--fonte-destaque);
+  font-size: 18px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  text-transform: uppercase;
+}
+
+.info-perfil-conta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.info-perfil-conta strong {
+  font-size: 14px;
+}
+
 /* Botão de ação perigosa (excluir) */
 .botao-perigo {
   width: 100%;
@@ -1268,6 +1302,19 @@ html[data-privado="ativo"] .valor-sensivel {
   color: var(--cor-texto-suave);
   margin-top: 4px;
   line-height: 1.4;
+}
+
+/* Ícone girando, usado nos botões enquanto "carregam" (ver
+   comLoadingBotao no JS) — não depende do Font Awesome ter a
+   animação própria carregada, por garantia */
+@keyframes girar {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.icone-carregando {
+  display: inline-block;
+  animation: girar 0.6s linear infinite;
 }
 
 /* Checkbox "Repetir todo mês" no formulário de novo lançamento */

@@ -603,6 +603,18 @@ document.getElementById('botao-simular-mes').addEventListener('click', () => {
 });
 
 
+// Guarda a "instância" do gráfico de evolução (pra poder destruir e
+// redesenhar sem o Chart.js reclamar) e os 5 pontos fixos de exemplo
+// que representam dias anteriores aos que existem na tela — ambos
+// precisam existir ANTES da PARTE 7 (ver explicação mais abaixo, na
+// função desenharGraficoEvolucaoSaldo).
+let instanciaGraficoEvolucao = null;
+
+const evolucaoSaldoExemplo = {
+  dias: ['Qui', 'Sex', 'Sáb', 'Dom', 'Seg'],
+  valores: [3850, 4200, 3980, 4450, 4100],
+};
+
 /*
   ================================================
   PARTE 7 - NOVO LANÇAMENTO (formulário + salvar + listar)
@@ -761,19 +773,23 @@ document.getElementById('botao-novo-lancamento').addEventListener('click', () =>
       return;
     }
 
-    adicionarLancamento({ tipo: tipoEscolhido, descricao, categoria, valor, recorrente }, true);
+    const botaoSalvar = evento.target.querySelector('button[type="submit"]');
 
-    if (recorrente) {
-      registrarRegraRecorrente({ tipo: tipoEscolhido, descricao, categoria, valor });
-    }
+    comLoadingBotao(botaoSalvar, () => {
+      adicionarLancamento({ tipo: tipoEscolhido, descricao, categoria, valor, recorrente }, true);
 
-    fecharModal();
+      if (recorrente) {
+        registrarRegraRecorrente({ tipo: tipoEscolhido, descricao, categoria, valor });
+      }
 
-    // Se esse lançamento fez a categoria passar do limite definido, o
-    // aviso de orçamento é mais importante que o toast de sucesso comum
-    // — por isso ele toma o lugar do "Lançamento adicionado!" nesse caso.
-    const avisoDeLimite = tipoEscolhido === 'despesa' ? verificarLimiteExcedido(categoria) : null;
-    mostrarToast(avisoDeLimite || 'Lançamento adicionado! 🎉');
+      fecharModal();
+
+      // Se esse lançamento fez a categoria passar do limite definido, o
+      // aviso de orçamento é mais importante que o toast de sucesso comum
+      // — por isso ele toma o lugar do "Lançamento adicionado!" nesse caso.
+      const avisoDeLimite = tipoEscolhido === 'despesa' ? verificarLimiteExcedido(categoria) : null;
+      mostrarToast(avisoDeLimite || 'Lançamento adicionado! 🎉');
+    });
   });
 });
 
@@ -885,38 +901,42 @@ telaMovimentacoes.addEventListener('click', (evento) => {
       return;
     }
 
-    const estadoAntigo = { ...estadoFinanceiro };
+    const botaoSalvarEdicao = eventoSubmit.target.querySelector('button[type="submit"]');
 
-    // Primeiro desfaz o efeito do valor ANTIGO...
-    if (dadosAtuais.tipo === 'receita') {
-      estadoFinanceiro.receitas -= dadosAtuais.valor;
-    } else {
-      estadoFinanceiro.despesas -= dadosAtuais.valor;
-    }
+    comLoadingBotao(botaoSalvarEdicao, () => {
+      const estadoAntigo = { ...estadoFinanceiro };
 
-    // ...depois aplica o efeito do valor NOVO
-    if (tipoNovo === 'receita') {
-      estadoFinanceiro.receitas += valorNovo;
-    } else {
-      estadoFinanceiro.despesas += valorNovo;
-    }
+      // Primeiro desfaz o efeito do valor ANTIGO...
+      if (dadosAtuais.tipo === 'receita') {
+        estadoFinanceiro.receitas -= dadosAtuais.valor;
+      } else {
+        estadoFinanceiro.despesas -= dadosAtuais.valor;
+      }
 
-    // Troca o <li> antigo por um novo, construído com os dados atualizados,
-    // mantendo a mesma posição na lista (replaceWith faz isso por nós)
-    const noAtualizado = construirNoLancamento({
-      tipo: tipoNovo,
-      descricao: descricaoNova,
-      categoria: categoriaNova,
-      valor: valorNovo,
-      recorrente: dadosAtuais.recorrente,
+      // ...depois aplica o efeito do valor NOVO
+      if (tipoNovo === 'receita') {
+        estadoFinanceiro.receitas += valorNovo;
+      } else {
+        estadoFinanceiro.despesas += valorNovo;
+      }
+
+      // Troca o <li> antigo por um novo, construído com os dados atualizados,
+      // mantendo a mesma posição na lista (replaceWith faz isso por nós)
+      const noAtualizado = construirNoLancamento({
+        tipo: tipoNovo,
+        descricao: descricaoNova,
+        categoria: categoriaNova,
+        valor: valorNovo,
+        recorrente: dadosAtuais.recorrente,
+      });
+      li.replaceWith(noAtualizado);
+
+      atualizarResumoNaTela(estadoAntigo);
+      renderizarOrcamentoPorCategoria();
+      aplicarFiltrosMovimentacoes();
+      fecharModal();
+      mostrarToast('Lançamento atualizado! ✏️');
     });
-    li.replaceWith(noAtualizado);
-
-    atualizarResumoNaTela(estadoAntigo);
-    renderizarOrcamentoPorCategoria();
-    aplicarFiltrosMovimentacoes();
-    fecharModal();
-    mostrarToast('Lançamento atualizado! ✏️');
   });
 
   // --- Excluir lançamento (pede confirmação com um segundo clique) ---
@@ -1152,19 +1172,23 @@ function abrirFormularioMeta(metaExistente) {
       return;
     }
 
-    const metas = obterMetas();
+    const botaoSalvarMeta = evento.target.querySelector('button[type="submit"]');
 
-    if (metaExistente) {
-      const indice = metas.findIndex((meta) => meta.id === metaExistente.id);
-      metas[indice] = { ...metaExistente, nome, icone, meta: valorMeta, atual: valorAtual };
-    } else {
-      metas.push({ id: Date.now(), nome, icone, meta: valorMeta, atual: valorAtual });
-    }
+    comLoadingBotao(botaoSalvarMeta, () => {
+      const metas = obterMetas();
 
-    salvarMetas(metas);
-    renderizarMetaPrincipal();
-    fecharModal();
-    mostrarToast(metaExistente ? 'Meta atualizada! ✏️' : 'Meta criada! 🎯');
+      if (metaExistente) {
+        const indice = metas.findIndex((meta) => meta.id === metaExistente.id);
+        metas[indice] = { ...metaExistente, nome, icone, meta: valorMeta, atual: valorAtual };
+      } else {
+        metas.push({ id: Date.now(), nome, icone, meta: valorMeta, atual: valorAtual });
+      }
+
+      salvarMetas(metas);
+      renderizarMetaPrincipal();
+      fecharModal();
+      mostrarToast(metaExistente ? 'Meta atualizada! ✏️' : 'Meta criada! 🎯');
+    });
   });
 
   if (!metaExistente) return;
@@ -1262,22 +1286,14 @@ function lerCorCSS(nomeVariavel) {
   vindo de um back-end). Fica na Tela 1, visível direto — por isso,
   diferente do gráfico de categorias, não espera um modal abrir;
   ele já é desenhado assim que a página carrega.
-*/
-let instanciaGraficoEvolucao = null;
 
-/*
-  Como o app não tem back-end com histórico de datas de verdade, os
-  5 primeiros pontos continuam sendo "dados de antes" fixos (dias que
-  nem existem na tela de Movimentações). Só os 2 últimos pontos
-  ("Ontem" e "Hoje") são calculados de verdade, a partir da soma dos
-  lançamentos que realmente estão nas listas #lista-ontem e
-  #lista-hoje — então se a pessoa adicionar, editar ou excluir um
-  lançamento, o gráfico muda junto.
+  OBS: "instanciaGraficoEvolucao" e "evolucaoSaldoExemplo" são
+  declaradas lá em cima, ANTES da PARTE 7 — não aqui — porque
+  atualizarResumoNaTela() (que roda logo na PARTE 7, ao carregar os
+  lançamentos salvos) já chama desenharGraficoEvolucaoSaldo(), e esse
+  tipo de variável (let/const) precisa existir ANTES de ser usada,
+  mesmo que a função que a usa só seja chamada bem depois.
 */
-const evolucaoSaldoExemplo = {
-  dias: ['Qui', 'Sex', 'Sáb', 'Dom', 'Seg'],
-  valores: [3850, 4200, 3980, 4450, 4100],
-};
 
 // Soma (receita soma, despesa subtrai) todos os ".lancamento" que
 // estão DENTRO de uma lista específica (ex: só os de "Ontem")
@@ -1502,6 +1518,28 @@ const CHAVE_USUARIO = 'meu-bolso:usuario';
 const telaLogin = document.getElementById('tela-login');
 const textoSaudacao = document.getElementById('texto-saudacao');
 const textoUsuarioLogado = document.getElementById('texto-usuario-logado');
+const avatarUsuario = document.getElementById('avatar-usuario');
+
+/*
+  Deixa um botão de formulário "carregando" (ícone girando + travado
+  pra não clicar de novo) por um tempinho antes de executar a ação de
+  verdade. É só efeito visual — como ainda não tem back-end, não tem
+  nada pra "esperar" de verdade — mas simula a sensação de um app
+  processando a informação, em vez da ação acontecer instantânea
+  demais (o que parece "bugado"/pouco real).
+*/
+function comLoadingBotao(botao, acao, duracaoMs = 600) {
+  const textoOriginal = botao.innerHTML;
+
+  botao.disabled = true;
+  botao.innerHTML = '<i class="fa-solid fa-spinner icone-carregando"></i>';
+
+  setTimeout(() => {
+    acao();
+    botao.disabled = false;
+    botao.innerHTML = textoOriginal;
+  }, duracaoMs);
+}
 
 /*
   Botão de "mostrar/esconder senha" (ícone de olho) nos campos de
@@ -1544,6 +1582,10 @@ function entrarNoApp(nome, email) {
   telaLogin.classList.add('tela-auth-escondida');
   textoSaudacao.textContent = `Olá, ${nome}!`;
   textoUsuarioLogado.textContent = email ? `${nome} (${email})` : nome;
+
+  // Avatar = primeira letra do nome, maiúscula (se por algum motivo
+  // vier vazio, usa "?" pra nunca deixar o círculo sem nada dentro)
+  avatarUsuario.textContent = nome.trim().charAt(0).toUpperCase() || '?';
 }
 
 // --- Formulário de login ---
@@ -1553,13 +1595,17 @@ document.getElementById('form-login').addEventListener('submit', (evento) => {
   const email = document.getElementById('login-email').value.trim();
   if (!email) return;
 
-  // Se a pessoa já tinha se cadastrado antes (mesmo e-mail), usa o nome
-  // salvo. Senão, usa a parte antes do "@" do e-mail como nome provisório.
-  const usuarioSalvo = JSON.parse(localStorage.getItem(CHAVE_USUARIO));
-  const nome = (usuarioSalvo && usuarioSalvo.email === email) ? usuarioSalvo.nome : email.split('@')[0];
+  const botaoEntrar = evento.target.querySelector('button[type="submit"]');
 
-  localStorage.setItem(CHAVE_USUARIO, JSON.stringify({ nome, email }));
-  entrarNoApp(nome, email);
+  comLoadingBotao(botaoEntrar, () => {
+    // Se a pessoa já tinha se cadastrado antes (mesmo e-mail), usa o
+    // nome salvo. Senão, usa a parte antes do "@" como nome provisório.
+    const usuarioSalvo = JSON.parse(localStorage.getItem(CHAVE_USUARIO));
+    const nome = (usuarioSalvo && usuarioSalvo.email === email) ? usuarioSalvo.nome : email.split('@')[0];
+
+    localStorage.setItem(CHAVE_USUARIO, JSON.stringify({ nome, email }));
+    entrarNoApp(nome, email);
+  });
 });
 
 // --- Formulário de cadastro ---
@@ -1570,8 +1616,12 @@ document.getElementById('form-cadastro').addEventListener('submit', (evento) => 
   const email = document.getElementById('cadastro-email').value.trim();
   if (!nome || !email) return;
 
-  localStorage.setItem(CHAVE_USUARIO, JSON.stringify({ nome, email }));
-  entrarNoApp(nome, email);
+  const botaoCriarConta = evento.target.querySelector('button[type="submit"]');
+
+  comLoadingBotao(botaoCriarConta, () => {
+    localStorage.setItem(CHAVE_USUARIO, JSON.stringify({ nome, email }));
+    entrarNoApp(nome, email);
+  });
 });
 
 // --- Logout ---
@@ -1584,6 +1634,7 @@ document.querySelectorAll('.botao-sair-trigger').forEach((botao) => {
     localStorage.removeItem(CHAVE_USUARIO);
     telaLogin.classList.remove('tela-auth-escondida');
     textoUsuarioLogado.textContent = '—';
+    avatarUsuario.textContent = '?';
 
     // Volta pro formulário de login (caso tivesse ficado na aba de cadastro)
     document.querySelector('[data-formulario="form-login"]').click();
