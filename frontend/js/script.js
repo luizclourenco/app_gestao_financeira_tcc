@@ -499,6 +499,67 @@ function verificarLimiteExcedido(categoria) {
   return null;
 }
 
+/*
+  ------------------------------------------------
+  Orçamento do MÊS INTEIRO (card "Orçamento do mês")
+  ------------------------------------------------
+  Mesma ideia do orçamento por categoria, só que somando TODAS as
+  despesas de uma vez, não só de uma categoria. Antes esse card tinha
+  números fixos de exemplo (inconsistente com o card de categorias
+  logo abaixo, que já usava dado real) — agora os dois funcionam do
+  mesmo jeito.
+*/
+
+const CHAVE_ORCAMENTO_MENSAL = 'meu-bolso:orcamento-mensal';
+const ORCAMENTO_MENSAL_PADRAO = 5000;
+
+const campoOrcamentoMensal = document.getElementById('campo-orcamento-mensal');
+const orcamentoMensalRealizado = document.getElementById('orcamento-mensal-realizado');
+const orcamentoMensalRestante = document.getElementById('orcamento-mensal-restante');
+const orcamentoMensalBarra = document.getElementById('orcamento-mensal-barra');
+
+function obterOrcamentoMensal() {
+  const valorSalvo = localStorage.getItem(CHAVE_ORCAMENTO_MENSAL);
+  return valorSalvo !== null ? parseFloat(valorSalvo) : ORCAMENTO_MENSAL_PADRAO;
+}
+
+function calcularTotalDespesas() {
+  let total = 0;
+  document.querySelectorAll('.lancamento[data-tipo="despesa"]').forEach((item) => {
+    total += paraNumero(item.querySelector('.valor-negativo').textContent);
+  });
+  return total;
+}
+
+function renderizarOrcamentoMensal() {
+  const orcamento = obterOrcamentoMensal();
+  const realizado = calcularTotalDespesas();
+  const restante = orcamento - realizado;
+  const porcentagem = orcamento > 0 ? Math.round((realizado / orcamento) * 100) : 0;
+
+  campoOrcamentoMensal.value = orcamento;
+  orcamentoMensalRealizado.textContent = formatarMoeda(realizado);
+  orcamentoMensalRestante.textContent = formatarMoeda(restante);
+  orcamentoMensalRestante.classList.toggle('valor-positivo', restante >= 0);
+  orcamentoMensalRestante.classList.toggle('valor-negativo', restante < 0);
+
+  orcamentoMensalBarra.style.width = Math.min(porcentagem, 100) + '%';
+  orcamentoMensalBarra.classList.remove('barra-progresso-verde', 'barra-progresso-alerta', 'barra-progresso-estourada');
+  if (restante < 0) {
+    orcamentoMensalBarra.classList.add('barra-progresso-estourada');
+  } else if (porcentagem >= 80) {
+    orcamentoMensalBarra.classList.add('barra-progresso-alerta');
+  } else {
+    orcamentoMensalBarra.classList.add('barra-progresso-verde');
+  }
+}
+
+campoOrcamentoMensal.addEventListener('change', () => {
+  const novoValor = parseFloat(campoOrcamentoMensal.value) || 0;
+  localStorage.setItem(CHAVE_ORCAMENTO_MENSAL, novoValor);
+  renderizarOrcamentoMensal();
+});
+
 
 /*
   ================================================
@@ -692,9 +753,10 @@ function adicionarLancamento(dados, salvarNoLocalStorage) {
   atualizarResumoNaTela(estadoAntigo);
 
   // Limites de orçamento só fazem sentido pra despesas (não tem
-  // "limite de receita"), então só repintamos o card nesse caso.
+  // "limite de receita"), então só repintamos os cards nesse caso.
   if (dados.tipo === 'despesa') {
     renderizarOrcamentoPorCategoria();
+    renderizarOrcamentoMensal();
   }
 
   if (salvarNoLocalStorage) {
@@ -805,6 +867,7 @@ carregarLancamentosSalvos();
 // lançamentos carregados acima (precisa vir depois de
 // iconesPorCategoria existir, por isso só aqui e não na PARTE 6.5/6.6)
 renderizarOrcamentoPorCategoria();
+renderizarOrcamentoMensal();
 renderizarRecorrentes();
 
 
@@ -933,6 +996,7 @@ telaMovimentacoes.addEventListener('click', (evento) => {
 
       atualizarResumoNaTela(estadoAntigo);
       renderizarOrcamentoPorCategoria();
+      renderizarOrcamentoMensal();
       aplicarFiltrosMovimentacoes();
       fecharModal();
       mostrarToast('Lançamento atualizado! ✏️');
@@ -964,6 +1028,7 @@ telaMovimentacoes.addEventListener('click', (evento) => {
     li.remove();
     atualizarResumoNaTela(estadoAntigo);
     renderizarOrcamentoPorCategoria();
+    renderizarOrcamentoMensal();
     atualizarEstadoVazioLancamentos(); // pode ter sido o último item da lista
     fecharModal();
     mostrarToast('Lançamento excluído. 🗑️');

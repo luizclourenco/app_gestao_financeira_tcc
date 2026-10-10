@@ -1379,6 +1379,10 @@ html[data-privado="ativo"] .valor-sensivel {
   background: var(--cor-positiva);
 }
 
+.barra-progresso-orcamento-mensal {
+  margin-top: 10px;
+}
+
 /* Card de dica: ícone + texto lado a lado */
 .card-dica {
   display: flex;

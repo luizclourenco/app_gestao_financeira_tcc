@@ -527,21 +527,30 @@
           </select>
         </div>
 
+        <!--
+          Assim como o card "Limites por categoria", esses valores
+          agora são calculados de verdade (função
+          renderizarOrcamentoMensal no JS) — "Gasto previsto" é o
+          único editável (um limite geral pro mês todo), os outros
+          dois são sempre recalculados a partir dos lançamentos reais.
+        -->
         <div class="linha-orcamento">
           <span class="rotulo">Gasto previsto</span>
-          <strong class="valor-sensivel">R$ 5.000,00</strong>
+          <label class="editar-limite">
+            R$ <input type="number" min="0" step="50" id="campo-orcamento-mensal" class="campo-limite-categoria">
+          </label>
         </div>
         <div class="linha-orcamento">
           <span class="rotulo">Gasto realizado</span>
-          <strong class="valor-sensivel">R$ 1.930,00</strong>
+          <strong class="valor-sensivel" id="orcamento-mensal-realizado">R$ 0,00</strong>
         </div>
         <div class="linha-orcamento">
           <span class="rotulo">Restante</span>
-          <strong class="valor-positivo valor-sensivel">R$ 3.070,00</strong>
+          <strong class="valor-sensivel" id="orcamento-mensal-restante">R$ 0,00</strong>
         </div>
 
-        <div class="barra-progresso" style="margin-top: 10px;">
-          <div class="barra-progresso-preenchida barra-progresso-verde" style="width: 38%;"></div>
+        <div class="barra-progresso barra-progresso-orcamento-mensal">
+          <div class="barra-progresso-preenchida barra-progresso-verde" id="orcamento-mensal-barra" style="width: 0%;"></div>
         </div>
       </div>
 
