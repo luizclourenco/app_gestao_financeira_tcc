@@ -988,6 +988,100 @@ html[data-privado="ativo"] .valor-sensivel {
 }
 
 /* ================================================
+   ONBOARDING DE BOAS-VINDAS
+   ================================================
+   Reaproveita a base visual de .tela-auth (overlay cobrindo tudo),
+   só muda o conteúdo de dentro: 3 "slides" empilhados no mesmo
+   lugar, um de cada vez (igual os formulários de login/cadastro
+   fazem com .auth-form-escondido).
+   ================================================ */
+.link-pular-onboarding {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--cor-texto-suave);
+  cursor: pointer;
+  padding: 8px;
+}
+
+.onboarding-conteudo {
+  width: 100%;
+  max-width: 320px;
+  text-align: center;
+}
+
+.onboarding-slide {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  animation: entrada-pela-direita 0.25s ease;
+}
+
+.onboarding-slide-ativa {
+  display: flex;
+}
+
+.onboarding-icone {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  background: var(--cor-primaria-clara);
+  color: var(--cor-primaria);
+  font-size: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 24px;
+}
+
+.onboarding-titulo {
+  font-family: var(--fonte-destaque);
+  font-size: 22px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.onboarding-texto {
+  font-size: 14px;
+  color: var(--cor-texto-suave);
+  line-height: 1.6;
+}
+
+/* Botão "Próximo"/"Começar" + bolinhas de progresso, fixos embaixo
+   da tela (fora do .onboarding-conteudo, pra não "pular" de lugar
+   quando o texto de um slide for maior que o outro) */
+.onboarding-rodape {
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  bottom: 40px;
+}
+
+.onboarding-dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--cor-borda);
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.dot-ativa {
+  background: var(--cor-primaria);
+  transform: scale(1.25);
+}
+
+/* ================================================
    RESPONSIVO
    Em celulares de verdade (tela pequena), o app já ocupa
    100% da largura e altura por causa das regras lá em cima.

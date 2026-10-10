@@ -129,6 +129,47 @@
       </div>
     </section>
 
+    <!--
+      ================================================
+      ONBOARDING DE BOAS-VINDAS
+      ================================================
+      Aparece só uma vez, logo depois que a pessoa CRIA a conta
+      (não no login normal) — 3 telinhas rápidas explicando as partes
+      principais do app, antes de cair no Resumo de verdade.
+    -->
+    <section id="tela-onboarding" class="tela-auth tela-auth-escondida">
+      <button type="button" class="link-pular-onboarding" id="botao-pular-onboarding">Pular</button>
+
+      <div class="onboarding-conteudo">
+        <div class="onboarding-slide onboarding-slide-ativa" data-slide="0">
+          <span class="onboarding-icone"><i class="fa-solid fa-list-check"></i></span>
+          <h2 class="onboarding-titulo">Organize seus lançamentos</h2>
+          <p class="onboarding-texto">Registre receitas e despesas em segundos, já separadas por categoria e cor pra identificar tudo de relance.</p>
+        </div>
+
+        <div class="onboarding-slide" data-slide="1">
+          <span class="onboarding-icone"><i class="fa-solid fa-bullseye"></i></span>
+          <h2 class="onboarding-titulo">Controle seu orçamento</h2>
+          <p class="onboarding-texto">Defina limites por categoria e crie metas financeiras — o app avisa quando você estiver perto de estourar.</p>
+        </div>
+
+        <div class="onboarding-slide" data-slide="2">
+          <span class="onboarding-icone"><i class="fa-solid fa-palette"></i></span>
+          <h2 class="onboarding-titulo">Do seu jeito</h2>
+          <p class="onboarding-texto">Escolha entre os temas vinho ou azul, no modo claro ou escuro, e deixe o app com a sua cara.</p>
+        </div>
+      </div>
+
+      <div class="onboarding-rodape">
+        <div class="onboarding-dots" id="onboarding-dots">
+          <span class="dot dot-ativa"></span>
+          <span class="dot"></span>
+          <span class="dot"></span>
+        </div>
+        <button type="button" class="botao-primario" id="botao-avancar-onboarding">Próximo</button>
+      </div>
+    </section>
+
     <!-- ============================================= -->
     <!-- TELA 1 - RESUMO                                -->
     <!-- ============================================= -->

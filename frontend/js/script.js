@@ -1621,8 +1621,63 @@ document.getElementById('form-cadastro').addEventListener('submit', (evento) => 
   comLoadingBotao(botaoCriarConta, () => {
     localStorage.setItem(CHAVE_USUARIO, JSON.stringify({ nome, email }));
     entrarNoApp(nome, email);
+    mostrarOnboarding(); // só na criação de conta, não no login normal
   });
 });
+
+/*
+  ================================================
+  ONBOARDING DE BOAS-VINDAS (só na criação de conta)
+  ================================================
+
+  3 telinhas rápidas, uma de cada vez, explicando as partes
+  principais do app. Reaproveita a MESMA ideia das abas de
+  login/cadastro: todos os slides existem no HTML o tempo todo, só
+  troca qual tem a classe "-ativa" (nunca cria/destrói nada).
+*/
+
+const telaOnboarding = document.getElementById('tela-onboarding');
+const slidesOnboarding = document.querySelectorAll('.onboarding-slide');
+const dotsOnboarding = document.querySelectorAll('#onboarding-dots .dot');
+const botaoAvancarOnboarding = document.getElementById('botao-avancar-onboarding');
+let indiceSlideOnboarding = 0;
+
+function mostrarSlideOnboarding(indice) {
+  indiceSlideOnboarding = indice;
+
+  slidesOnboarding.forEach((slide, i) => {
+    slide.classList.toggle('onboarding-slide-ativa', i === indice);
+  });
+
+  dotsOnboarding.forEach((dot, i) => {
+    dot.classList.toggle('dot-ativa', i === indice);
+  });
+
+  // No último slide, o botão vira "Começar" em vez de "Próximo"
+  const ehUltimoSlide = indice === slidesOnboarding.length - 1;
+  botaoAvancarOnboarding.textContent = ehUltimoSlide ? 'Começar' : 'Próximo';
+}
+
+function mostrarOnboarding() {
+  mostrarSlideOnboarding(0);
+  telaOnboarding.classList.remove('tela-auth-escondida');
+}
+
+function fecharOnboarding() {
+  telaOnboarding.classList.add('tela-auth-escondida');
+}
+
+botaoAvancarOnboarding.addEventListener('click', () => {
+  const ehUltimoSlide = indiceSlideOnboarding === slidesOnboarding.length - 1;
+
+  if (ehUltimoSlide) {
+    fecharOnboarding();
+  } else {
+    mostrarSlideOnboarding(indiceSlideOnboarding + 1);
+  }
+});
+
+document.getElementById('botao-pular-onboarding').addEventListener('click', fecharOnboarding);
 
 // --- Logout ---
 // Existem 2 botões de sair (um na Tela 1, outro no card "Conta" da
@@ -1648,11 +1703,16 @@ document.querySelectorAll('.botao-sair-trigger').forEach((botao) => {
   });
 });
 
-// --- Ao carregar a página: se já tinha usuário salvo, pula o login ---
-const usuarioJaLogado = JSON.parse(localStorage.getItem(CHAVE_USUARIO));
-if (usuarioJaLogado) {
-  entrarNoApp(usuarioJaLogado.nome, usuarioJaLogado.email);
-}
+/*
+  OBS: antes, aqui a gente checava se já tinha um usuário salvo no
+  localStorage e pulava a tela de login direto pro app (igual
+  Gmail/Instagram fazem). Tiramos essa parte de propósito: agora a
+  tela de login sempre aparece primeiro quando a página carrega,
+  mesmo que a pessoa já tenha logado antes nesse navegador. O login
+  em si continua "lembrando" o nome de quem já se cadastrou (olha a
+  função de submit do #form-login, lá em cima) — só não pula mais a
+  tela sozinho.
+*/
 
 
 /*
