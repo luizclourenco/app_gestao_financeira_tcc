@@ -2106,9 +2106,11 @@ document.getElementById('botao-esqueceu-senha').addEventListener('click', () => 
 const campoCadastroNome = document.getElementById('cadastro-nome');
 const campoCadastroEmail = document.getElementById('cadastro-email');
 const campoCadastroSenha = document.getElementById('cadastro-senha');
+const campoCadastroConfirmarSenha = document.getElementById('cadastro-confirmar-senha');
 limparErroAoDigitar(campoCadastroNome);
 limparErroAoDigitar(campoCadastroEmail);
 limparErroAoDigitar(campoCadastroSenha);
+limparErroAoDigitar(campoCadastroConfirmarSenha);
 
 document.getElementById('form-cadastro').addEventListener('submit', (evento) => {
   evento.preventDefault();
@@ -2132,11 +2134,21 @@ document.getElementById('form-cadastro').addEventListener('submit', (evento) => 
     temErro = true;
   }
 
+  const confirmarSenha = campoCadastroConfirmarSenha.value;
+
   if (!senha) {
     mostrarErroCampo(campoCadastroSenha, 'Crie uma senha.');
     temErro = true;
   } else if (senha.length < 6) {
     mostrarErroCampo(campoCadastroSenha, 'A senha precisa ter pelo menos 6 caracteres.');
+    temErro = true;
+  }
+
+  if (!confirmarSenha) {
+    mostrarErroCampo(campoCadastroConfirmarSenha, 'Digite a senha de novo.');
+    temErro = true;
+  } else if (senha && confirmarSenha !== senha) {
+    mostrarErroCampo(campoCadastroConfirmarSenha, 'As senhas não são iguais.');
     temErro = true;
   }
 
