@@ -1600,7 +1600,10 @@ html[data-privado="ativo"] .valor-sensivel {
   display: flex;
   align-items: flex-end; /* modal sobe de baixo pra cima, estilo app */
   justify-content: center;
-  z-index: 200;
+  /* precisa ficar ACIMA da .tela-auth (z-index 500), senão o modal
+     abre "por baixo" da tela de login/cadastro e fica invisível e
+     inclicável (foi o caso do modal de "esqueceu a senha") */
+  z-index: 600;
 }
 
 .modal-escondido {
@@ -1699,6 +1702,32 @@ html[data-privado="ativo"] .valor-sensivel {
   color: var(--cor-texto);
 }
 
+.link-esqueceu-senha {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+  font-size: 12px;
+  text-align: right;
+  color: var(--cor-primaria);
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.link-esqueceu-senha:hover {
+  text-decoration: underline;
+}
+
+.texto-modal-aviso {
+  font-size: 13px;
+  color: var(--cor-texto-suave);
+  line-height: 1.4;
+  margin-bottom: 16px;
+}
+
 /* Botões "Receita" / "Despesa" pra escolher o tipo no formulário */
 .grupo-tipo {
   display: flex;
@@ -1754,7 +1783,9 @@ html[data-privado="ativo"] .valor-sensivel {
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.2s ease, transform 0.2s ease;
-  z-index: 300;
+  /* também precisa passar da .tela-auth (500) e do modal (600), senão
+     o toast de "e-mail enviado (simulado)" não aparece na tela de login */
+  z-index: 700;
   max-width: 85%;
   text-align: center;
 }

@@ -1673,6 +1673,41 @@ document.getElementById('form-login').addEventListener('submit', (evento) => {
   });
 });
 
+// --- "Esqueceu a senha?" ---
+// Ainda não tem back-end de verdade, então esse fluxo é só visual: abre
+// um modal pedindo o e-mail e finge que mandou um link de redefinição.
+// Fica fácil trocar pela chamada real quando o back-end existir.
+function htmlFormularioEsqueciSenha() {
+  return `
+    <p class="texto-modal-aviso">Informe seu e-mail e simulamos o envio de um link de redefinição de senha.</p>
+    <form id="form-esqueceu-senha">
+      <div class="campo-formulario">
+        <label for="recuperar-email">E-mail</label>
+        <input type="email" id="recuperar-email" placeholder="voce@email.com" required>
+      </div>
+      <button type="submit" class="botao-primario">Enviar instruções</button>
+    </form>
+  `;
+}
+
+document.getElementById('botao-esqueceu-senha').addEventListener('click', () => {
+  abrirModal('Recuperar senha', htmlFormularioEsqueciSenha());
+
+  document.getElementById('form-esqueceu-senha').addEventListener('submit', (evento) => {
+    evento.preventDefault();
+
+    const email = document.getElementById('recuperar-email').value.trim();
+    if (!email) return;
+
+    const botaoEnviar = evento.target.querySelector('button[type="submit"]');
+
+    comLoadingBotao(botaoEnviar, () => {
+      fecharModal();
+      mostrarToast('📧 Se esse e-mail existir, enviamos um link de redefinição (simulado).');
+    });
+  });
+});
+
 // --- Formulário de cadastro ---
 document.getElementById('form-cadastro').addEventListener('submit', (evento) => {
   evento.preventDefault();
