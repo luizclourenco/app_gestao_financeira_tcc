@@ -24,6 +24,10 @@
   --cor-negativa: #B5473A;         /* terracota avermelhado - despesas */
   --cor-negativa-fundo: #F8E9E6;
   --cor-texto-inverso: #FFFFFF;    /* texto branco fixo, para usar em cima de fundo colorido */
+  /* Fundo da "mesa" atrás do celular: sempre branco, não importa o
+     esquema (vinho/azul) nem o tema (claro/escuro) — é só o cenário
+     ao redor do aparelho, não faz parte da identidade visual do app */
+  --cor-fundo-pagina: #FFFFFF;
 
   --fonte-destaque: 'Fraunces', serif; /* usada só em números grandes e títulos — dá personalidade */
 
@@ -43,22 +47,32 @@ html[data-esquema="vinho"] {
   --cor-primaria-clara: #F3E1E3;
   --cor-texto: #231A1C;            /* preto levemente avinhado, não preto puro */
   --cor-texto-suave: #786A6C;
-  --cor-fundo: #F7F2EC;            /* bege clarinho — fundo dos cards/inputs */
-  --cor-branco: #FFFDF9;           /* branco levemente quente — fundo dos cards */
-  --cor-borda: #E9E0DC;
-  --cor-fundo-pagina: #E5DFD8;     /* fundo da "mesa" atrás do celular (fixo, não muda com o tema) */
+  /* Fundo com um tom de vinho de verdade, não um bege/cinza neutro
+     que poderia ser confundido com o esquema azul */
+  --cor-fundo: #F7EBEA;
+  --cor-branco: #FFF8F7;           /* branco levemente quente — fundo dos cards */
+  --cor-borda: #EBD9D7;
 }
 
 /* ESQUEMA "VINHO" (escuro) */
 html[data-esquema="vinho"][data-tema="escuro"] {
   --cor-primaria: #A6465A;
-  --cor-primaria-escura: #4A1D28;
+  /* No modo claro, o gradiente do card de saldo vai de #7A3042 até
+     #4A1D28 (escurece). No escuro, antes, usava esse MESMO #4A1D28
+     como ponta escura — só que como o fundo já é escuro, o card
+     acabava parecendo "a mesma cor" nos dois temas. Agora a ponta
+     escura também muda: no escuro ela fica mais clara/viva (usa o
+     tom que era a cor "clara" no tema claro), então o card inteiro
+     fica visivelmente diferente entre claro e escuro. */
+  --cor-primaria-escura: #7A3042;
   --cor-primaria-clara: #3A1E24;
   --cor-texto: #F0EAE8;
-  --cor-texto-suave: #A89A98;
-  --cor-fundo: #1E1517;
-  --cor-branco: #271A1D;
-  --cor-borda: #3C2C2F;
+  --cor-texto-suave: #BBA4A8;
+  /* Fundo escuro puxado pro vinho/borgonha, não um cinza-marrom
+     neutro que ficaria parecido com o fundo escuro do esquema azul */
+  --cor-fundo: #200F14;
+  --cor-branco: #2E161C;
+  --cor-borda: #45232B;
 }
 
 /*
@@ -70,24 +84,30 @@ html[data-esquema="azul"] {
   --cor-primaria: #2A4D7A;
   --cor-primaria-escura: #152A47;
   --cor-primaria-clara: #DCE6F2;
-  --cor-texto: #1A2430;
-  --cor-texto-suave: #5F6B7A;
-  --cor-fundo: #F2F4F8;
-  --cor-branco: #FFFFFF;
-  --cor-borda: #E1E6ED;
-  --cor-fundo-pagina: #DDE2EA;
+  --cor-texto: #16212E;
+  --cor-texto-suave: #5A6B80;
+  /* Fundo com um tom de azul de verdade, não um cinza neutro que
+     poderia ser confundido com o esquema vinho */
+  --cor-fundo: #E7EFF9;
+  --cor-branco: #FAFCFF;
+  --cor-borda: #D3E0EF;
 }
 
 /* ESQUEMA "AZUL" (escuro) */
 html[data-esquema="azul"][data-tema="escuro"] {
   --cor-primaria: #4D7AB8;
-  --cor-primaria-escura: #152A47;
+  /* Mesma lógica do vinho escuro: a ponta escura do gradiente do
+     card de saldo usa o tom que era a cor "primária" no tema claro,
+     em vez de repetir o mesmo #152A47 escuro dos dois temas. */
+  --cor-primaria-escura: #2A4D7A;
   --cor-primaria-clara: #1C2C3E;
   --cor-texto: #EBEEF2;
-  --cor-texto-suave: #98A3B0;
-  --cor-fundo: #11161D;
-  --cor-branco: #182230;
-  --cor-borda: #28323F;
+  --cor-texto-suave: #93A6BE;
+  /* Fundo escuro puxado pro azul-marinho, não um cinza/preto neutro
+     que ficaria parecido com o fundo escuro do esquema vinho */
+  --cor-fundo: #0A121F;
+  --cor-branco: #142A47;
+  --cor-borda: #223A57;
 }
 
 /*
@@ -938,13 +958,26 @@ html[data-privado="ativo"] .valor-sensivel {
 
 /* Cores fixas (não usam variável) — são a PRÉVIA de cada esquema,
    então precisam mostrar a cor de verdade mesmo que esse esquema
-   não esteja ativo agora */
+   não esteja ativo agora. Como o tom "primária" de cada esquema
+   muda entre claro/escuro (ver variáveis lá em cima), a prévia
+   também muda com html[data-tema="escuro"] — senão as duas bolinhas
+   ficam com a mesma cara independente do tema, e dá a impressão de
+   que claro e escuro são a "mesma cor". */
 .amostra-vinho {
   background: linear-gradient(135deg, #7A3042, #4A1D28);
 }
 
+html[data-tema="escuro"] .amostra-vinho {
+  /* mesmo gradiente do card de saldo no modo escuro (ver --cor-primaria-escura) */
+  background: linear-gradient(135deg, #A6465A, #7A3042);
+}
+
 .amostra-azul {
   background: linear-gradient(135deg, #2A4D7A, #152A47);
+}
+
+html[data-tema="escuro"] .amostra-azul {
+  background: linear-gradient(135deg, #4D7AB8, #2A4D7A);
 }
 
 .auth-abas {
