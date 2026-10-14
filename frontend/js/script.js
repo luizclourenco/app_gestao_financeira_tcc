@@ -132,6 +132,36 @@ const abasFiltro = document.querySelectorAll('.aba');
 const containerLancamentos = document.getElementById('container-lancamentos');
 const estadoVazioLancamentos = document.getElementById('estado-vazio-lancamentos');
 const campoBuscaLancamentos = document.getElementById('campo-busca-lancamentos');
+const campoFiltroMes = document.getElementById('campo-filtro-mes');
+
+/*
+  Reconstrói as opções do seletor de mês com base nos meses que
+  realmente aparecem nos lançamentos na tela (data-data="AAAA-MM-DD").
+  Chamamos isso toda vez que um lançamento pode ter mudado de mês:
+  ao carregar a página, criar, editar, excluir ou simular o próximo mês.
+*/
+function atualizarOpcoesFiltroMes() {
+  const mesSelecionadoAntes = campoFiltroMes.value || 'todos';
+
+  const mesesEncontrados = new Set();
+  document.querySelectorAll('.lancamento[data-data]').forEach((lancamento) => {
+    mesesEncontrados.add(lancamento.getAttribute('data-data').slice(0, 7)); // "AAAA-MM"
+  });
+
+  // Mais recente primeiro
+  const mesesOrdenados = [...mesesEncontrados].sort().reverse();
+
+  const opcoesHtml = ['<option value="todos">Todos os meses</option>']
+    .concat(mesesOrdenados.map((chave) => `<option value="${chave}">${formatarMesEAno(chave)}</option>`))
+    .join('');
+
+  campoFiltroMes.innerHTML = opcoesHtml;
+
+  // Mantém o mês que a pessoa já tinha escolhido, se ele ainda existir
+  campoFiltroMes.value = mesesEncontrados.has(mesSelecionadoAntes) || mesSelecionadoAntes === 'todos'
+    ? mesSelecionadoAntes
+    : 'todos';
+}
 
 /*
   Estado vazio: olha quantos ".lancamento" estão realmente visíveis
@@ -158,16 +188,19 @@ function atualizarEstadoVazioLancamentos() {
 function aplicarFiltrosMovimentacoes() {
   const filtroEscolhido = document.querySelector('.aba-ativa').getAttribute('data-filtro');
   const termoBusca = campoBuscaLancamentos.value.trim().toLowerCase();
+  const mesEscolhido = campoFiltroMes.value;
   const listaAtual = document.querySelectorAll('.lancamento'); // busca atualizada!
 
   listaAtual.forEach((lancamento) => {
     const tipoDoLancamento = lancamento.getAttribute('data-tipo');
     const descricaoLancamento = lancamento.querySelector('.info-lancamento strong').textContent.toLowerCase();
+    const mesDoLancamento = (lancamento.getAttribute('data-data') || '').slice(0, 7);
 
     const passaFiltroTipo = (filtroEscolhido === 'todas') || (filtroEscolhido === tipoDoLancamento);
     const passaBusca = termoBusca === '' || descricaoLancamento.includes(termoBusca);
+    const passaMes = mesEscolhido === 'todos' || mesEscolhido === mesDoLancamento;
 
-    lancamento.classList.toggle('lancamento-escondido', !(passaFiltroTipo && passaBusca));
+    lancamento.classList.toggle('lancamento-escondido', !(passaFiltroTipo && passaBusca && passaMes));
   });
 
   atualizarEstadoVazioLancamentos();
@@ -182,6 +215,7 @@ abasFiltro.forEach((aba) => {
 });
 
 campoBuscaLancamentos.addEventListener('input', aplicarFiltrosMovimentacoes);
+campoFiltroMes.addEventListener('change', aplicarFiltrosMovimentacoes);
 
 
 /*
@@ -221,6 +255,42 @@ function paraNumero(textoMoeda) {
   const apenasDigitosEVirgula = textoMoeda.replace(/[^0-9,]/g, ''); // tira "R$", "-", espaços e pontos de milhar
   const comPontoDecimal = apenasDigitosEVirgula.replace(',', '.');
   return parseFloat(comPontoDecimal);
+}
+
+// Data de hoje no formato "AAAA-MM-DD", que é o que o <input type="date">
+// usa. Serve de valor padrão pra lançamentos novos e pros antigos que
+// foram salvos antes desse campo existir (ver construirNoLancamento).
+function obterDataDeHoje() {
+  const hoje = new Date();
+  const ano = hoje.getFullYear();
+  const mes = String(hoje.getMonth() + 1).padStart(2, '0');
+  const dia = String(hoje.getDate()).padStart(2, '0');
+  return `${ano}-${mes}-${dia}`;
+}
+
+// Mesma coisa, mas um mês à frente — usado pelo botão "Simular
+// próximo mês" dos lançamentos recorrentes, pra eles caírem de
+// verdade no mês seguinte quando filtrados.
+function obterDataDoProximoMes() {
+  const hoje = new Date();
+  const proximoMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, hoje.getDate());
+  const ano = proximoMes.getFullYear();
+  const mes = String(proximoMes.getMonth() + 1).padStart(2, '0');
+  const dia = String(proximoMes.getDate()).padStart(2, '0');
+  return `${ano}-${mes}-${dia}`;
+}
+
+const NOMES_DOS_MESES = [
+  'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
+  'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro',
+];
+
+// Transforma "2025-09" em "Setembro de 2025", pra usar como texto
+// das opções do filtro de mês.
+function formatarMesEAno(chaveAnoMes) {
+  const [ano, mes] = chaveAnoMes.split('-');
+  const nomeMes = NOMES_DOS_MESES[parseInt(mes, 10) - 1];
+  return `${nomeMes.charAt(0).toUpperCase()}${nomeMes.slice(1)} de ${ano}`;
 }
 
 /*
@@ -650,6 +720,8 @@ document.getElementById('botao-simular-mes').addEventListener('click', () => {
     return;
   }
 
+  const dataDoProximoMes = obterDataDoProximoMes();
+
   regras.forEach((regra) => {
     adicionarLancamento({
       tipo: regra.tipo,
@@ -657,9 +729,11 @@ document.getElementById('botao-simular-mes').addEventListener('click', () => {
       categoria: regra.categoria,
       valor: regra.valor,
       recorrente: true,
+      data: dataDoProximoMes,
     }, true);
   });
 
+  atualizarOpcoesFiltroMes();
   mostrarToast(`${regras.length} lançamento(s) recorrente(s) gerado(s) para o próximo mês! 🔁`);
 });
 
@@ -704,6 +778,9 @@ function construirNoLancamento(dados) {
   const item = document.createElement('li');
   item.className = 'lancamento';
   item.setAttribute('data-tipo', dados.tipo);
+  // Lançamentos salvos antes desse campo existir não têm "data" —
+  // nesse caso, assume hoje, só pra não sumir do filtro de mês.
+  item.setAttribute('data-data', dados.data || obterDataDeHoje());
 
   const nomeIcone = iconesPorCategoria[dados.categoria] || 'fa-ellipsis';
   const classeIcone = dados.tipo === 'receita' ? 'icone-receita' : 'icone-despesa';
@@ -805,6 +882,11 @@ function htmlFormularioNovoLancamento() {
       </div>
 
       <div class="campo-formulario">
+        <label for="campo-data-lancamento">Data</label>
+        <input type="date" id="campo-data-lancamento" value="${obterDataDeHoje()}" required>
+      </div>
+
+      <div class="campo-formulario">
         <label class="opcao-checkbox">
           <input type="checkbox" id="campo-recorrente">
           <span><i class="fa-solid fa-rotate"></i> Repetir esse lançamento todo mês</span>
@@ -829,6 +911,7 @@ document.getElementById('botao-novo-lancamento').addEventListener('click', () =>
     const categoria = tipoEscolhido === 'receita' ? 'Receita' : document.getElementById('campo-categoria').value;
     const valor = parseFloat(document.getElementById('campo-valor').value);
     const recorrente = document.getElementById('campo-recorrente').checked;
+    const data = document.getElementById('campo-data-lancamento').value || obterDataDeHoje();
 
     if (!descricao || !valor || valor <= 0) {
       mostrarToast('Preencha descrição e valor corretamente.');
@@ -838,12 +921,13 @@ document.getElementById('botao-novo-lancamento').addEventListener('click', () =>
     const botaoSalvar = evento.target.querySelector('button[type="submit"]');
 
     comLoadingBotao(botaoSalvar, () => {
-      adicionarLancamento({ tipo: tipoEscolhido, descricao, categoria, valor, recorrente }, true);
+      adicionarLancamento({ tipo: tipoEscolhido, descricao, categoria, valor, recorrente, data }, true);
 
       if (recorrente) {
         registrarRegraRecorrente({ tipo: tipoEscolhido, descricao, categoria, valor });
       }
 
+      atualizarOpcoesFiltroMes();
       fecharModal();
 
       // Se esse lançamento fez a categoria passar do limite definido, o
@@ -869,6 +953,7 @@ carregarLancamentosSalvos();
 renderizarOrcamentoPorCategoria();
 renderizarOrcamentoMensal();
 renderizarRecorrentes();
+atualizarOpcoesFiltroMes(); // monta o seletor de mês com os meses que já existem
 
 
 /*
@@ -926,6 +1011,11 @@ function htmlFormularioEditarLancamento(dadosAtuais) {
         <input type="number" id="campo-valor-edicao" value="${dadosAtuais.valor}" step="0.01" min="0.01" required>
       </div>
 
+      <div class="campo-formulario">
+        <label for="campo-data-edicao">Data</label>
+        <input type="date" id="campo-data-edicao" value="${dadosAtuais.data}" required>
+      </div>
+
       <button type="submit" class="botao-primario">Salvar alterações</button>
       <button type="button" class="botao-perigo" id="botao-excluir-lancamento">Excluir lançamento</button>
     </form>
@@ -946,6 +1036,7 @@ telaMovimentacoes.addEventListener('click', (evento) => {
     categoria: li.querySelector('.categoria-lancamento').textContent,
     valor: paraNumero(li.querySelector('.valor-positivo, .valor-negativo').textContent),
     recorrente: li.querySelector('.icone-recorrente') !== null,
+    data: li.getAttribute('data-data') || obterDataDeHoje(),
   };
 
   abrirModal('Editar lançamento', htmlFormularioEditarLancamento(dadosAtuais));
@@ -958,6 +1049,7 @@ telaMovimentacoes.addEventListener('click', (evento) => {
     const descricaoNova = document.getElementById('campo-descricao-edicao').value.trim();
     const categoriaNova = tipoNovo === 'receita' ? 'Receita' : document.getElementById('campo-categoria-edicao').value;
     const valorNovo = parseFloat(document.getElementById('campo-valor-edicao').value);
+    const dataNova = document.getElementById('campo-data-edicao').value || dadosAtuais.data;
 
     if (!descricaoNova || !valorNovo || valorNovo <= 0) {
       mostrarToast('Preencha descrição e valor corretamente.');
@@ -991,12 +1083,14 @@ telaMovimentacoes.addEventListener('click', (evento) => {
         categoria: categoriaNova,
         valor: valorNovo,
         recorrente: dadosAtuais.recorrente,
+        data: dataNova,
       });
       li.replaceWith(noAtualizado);
 
       atualizarResumoNaTela(estadoAntigo);
       renderizarOrcamentoPorCategoria();
       renderizarOrcamentoMensal();
+      atualizarOpcoesFiltroMes();
       aplicarFiltrosMovimentacoes();
       fecharModal();
       mostrarToast('Lançamento atualizado! ✏️');
@@ -1029,6 +1123,7 @@ telaMovimentacoes.addEventListener('click', (evento) => {
     atualizarResumoNaTela(estadoAntigo);
     renderizarOrcamentoPorCategoria();
     renderizarOrcamentoMensal();
+    atualizarOpcoesFiltroMes();
     atualizarEstadoVazioLancamentos(); // pode ter sido o último item da lista
     fecharModal();
     mostrarToast('Lançamento excluído. 🗑️');

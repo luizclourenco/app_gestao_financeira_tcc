@@ -1152,6 +1152,33 @@ html[data-privado="ativo"] .valor-sensivel {
   outline: none;
 }
 
+/* Seletor de mês (tela de Movimentações), mesmo visual da barra de busca */
+.filtro-mes {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--cor-branco);
+  border: 1px solid var(--cor-borda);
+  border-radius: 12px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  color: var(--cor-texto-suave);
+}
+
+.filtro-mes select {
+  flex: 1;
+  border: none;
+  background: none;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--cor-texto);
+  cursor: pointer;
+}
+
+.filtro-mes select:focus {
+  outline: none;
+}
+
 /* Botão azul grande de "+ Novo lançamento" */
 .botao-primario {
   width: 100%;

@@ -371,6 +371,15 @@
         <input type="search" id="campo-busca-lancamentos" placeholder="Buscar por descrição...">
       </div>
 
+      <!-- Filtro por mês, montado pelo JS com os meses que realmente
+           existem nos lançamentos (ver atualizarOpcoesFiltroMes) -->
+      <div class="filtro-mes">
+        <i class="fa-solid fa-calendar-days"></i>
+        <select id="campo-filtro-mes">
+          <option value="todos">Todos os meses</option>
+        </select>
+      </div>
+
       <div class="abas-filtro">
         <button class="aba aba-ativa" data-filtro="todas">Todas</button>
         <button class="aba" data-filtro="receita">Receitas</button>
@@ -392,7 +401,7 @@
       <p class="titulo-grupo-data">Hoje — 02/09/2025</p>
 
       <ul class="lista-lancamentos" id="lista-hoje">
-        <li class="lancamento" data-tipo="receita">
+        <li class="lancamento" data-tipo="receita" data-data="2025-09-02">
           <span class="icone-lancamento icone-receita"><i class="fa-solid fa-sack-dollar"></i></span>
           <div class="info-lancamento">
             <strong>Salário</strong>
@@ -402,7 +411,7 @@
           <span class="seta-lancamento">›</span>
         </li>
 
-        <li class="lancamento" data-tipo="despesa">
+        <li class="lancamento" data-tipo="despesa" data-data="2025-09-02">
           <span class="icone-lancamento icone-despesa"><i class="fa-solid fa-cart-shopping"></i></span>
           <div class="info-lancamento">
             <strong>Supermercado</strong>
@@ -412,7 +421,7 @@
           <span class="seta-lancamento">›</span>
         </li>
 
-        <li class="lancamento" data-tipo="despesa">
+        <li class="lancamento" data-tipo="despesa" data-data="2025-09-02">
           <span class="icone-lancamento icone-despesa"><i class="fa-solid fa-gas-pump"></i></span>
           <div class="info-lancamento">
             <strong>Combustível</strong>
@@ -422,7 +431,7 @@
           <span class="seta-lancamento">›</span>
         </li>
 
-        <li class="lancamento" data-tipo="receita">
+        <li class="lancamento" data-tipo="receita" data-data="2025-09-02">
           <span class="icone-lancamento icone-receita"><i class="fa-solid fa-gift"></i></span>
           <div class="info-lancamento">
             <strong>Bônus</strong>
@@ -437,7 +446,7 @@
       <p class="titulo-grupo-data">Ontem — 01/09/2025</p>
 
       <ul class="lista-lancamentos" id="lista-ontem">
-        <li class="lancamento" data-tipo="despesa">
+        <li class="lancamento" data-tipo="despesa" data-data="2025-09-01">
           <span class="icone-lancamento icone-despesa"><i class="fa-solid fa-utensils"></i></span>
           <div class="info-lancamento">
             <strong>Restaurante</strong>
@@ -447,7 +456,7 @@
           <span class="seta-lancamento">›</span>
         </li>
 
-        <li class="lancamento" data-tipo="despesa">
+        <li class="lancamento" data-tipo="despesa" data-data="2025-09-01">
           <span class="icone-lancamento icone-despesa"><i class="fa-solid fa-house"></i></span>
           <div class="info-lancamento">
             <strong>Aluguel</strong>
@@ -457,7 +466,7 @@
           <span class="seta-lancamento">›</span>
         </li>
 
-        <li class="lancamento" data-tipo="despesa">
+        <li class="lancamento" data-tipo="despesa" data-data="2025-09-01">
           <span class="icone-lancamento icone-despesa"><i class="fa-solid fa-car-side"></i></span>
           <div class="info-lancamento">
             <strong>Transporte por app</strong>
