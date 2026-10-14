@@ -1761,6 +1761,23 @@ html[data-tema="escuro"] .amostra-azul {
   font-family: inherit;
   background: var(--cor-fundo);
   color: var(--cor-texto); /* inputs/selects não herdam a cor do texto sozinhos, igual os botões */
+  transition: border-color 0.15s ease;
+}
+
+/* Campo com erro: borda vermelha + mensagem embaixo. A classe vai no
+   .campo-formulario (não direto no input), porque .campo-senha tem
+   um botão de "olho" no meio e o erro precisa aparecer abaixo de
+   tudo isso, não colado no input */
+.campo-formulario-com-erro input,
+.campo-formulario-com-erro select {
+  border-color: var(--cor-negativa);
+}
+
+.erro-campo {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--cor-negativa);
 }
 
 /*

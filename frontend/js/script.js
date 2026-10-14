@@ -438,6 +438,66 @@ function mostrarToast(mensagem) {
 
 /*
   ================================================
+  PARTE 6.1 - MENSAGENS DE ERRO NOS CAMPOS
+  ================================================
+
+  Em vez de só um toast genérico tipo "preencha os campos direito",
+  mostra a mensagem embaixo do campo específico que está errado (e
+  deixa a borda dele vermelha). O <span> da mensagem é criado na
+  hora, na primeira vez que aquele campo precisa de um erro — não
+  precisa existir um <span> vazio espalhado em todo formulário do
+  HTML só esperando ser usado.
+*/
+
+// Valida um formato de e-mail simples (não cobre todo caso real de
+// e-mail, só o suficiente pra pegar erro de digitação óbvio)
+function emailValido(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function mostrarErroCampo(inputElemento, mensagem) {
+  const campo = inputElemento.closest('.campo-formulario');
+  if (!campo) return;
+
+  campo.classList.add('campo-formulario-com-erro');
+
+  let spanErro = campo.querySelector('.erro-campo');
+  if (!spanErro) {
+    spanErro = document.createElement('span');
+    spanErro.className = 'erro-campo';
+    campo.appendChild(spanErro);
+  }
+  spanErro.textContent = mensagem;
+}
+
+function limparErroCampo(inputElemento) {
+  const campo = inputElemento.closest('.campo-formulario');
+  if (!campo) return;
+
+  campo.classList.remove('campo-formulario-com-erro');
+  const spanErro = campo.querySelector('.erro-campo');
+  if (spanErro) spanErro.remove();
+}
+
+// Limpa todos os erros de uma vez (chamado no começo de cada submit,
+// pra não ficar empilhando erro antigo em cima de erro novo)
+function limparErrosDoFormulario(formElemento) {
+  formElemento.querySelectorAll('.campo-formulario-com-erro').forEach((campo) => {
+    campo.classList.remove('campo-formulario-com-erro');
+    const spanErro = campo.querySelector('.erro-campo');
+    if (spanErro) spanErro.remove();
+  });
+}
+
+// Assim que a pessoa começa a corrigir o campo errado, o erro some
+// sozinho — não precisa esperar tentar enviar de novo pra sumir
+function limparErroAoDigitar(inputElemento) {
+  inputElemento.addEventListener('input', () => limparErroCampo(inputElemento));
+}
+
+
+/*
+  ================================================
   PARTE 6.5 - LIMITES DE ORÇAMENTO POR CATEGORIA
   ================================================
 
@@ -1023,7 +1083,7 @@ function adicionarLancamento(dados, salvarNoLocalStorage) {
 // HTML do formulário que aparece dentro do modal
 function htmlFormularioNovoLancamento() {
   return `
-    <form id="form-novo-lancamento">
+    <form id="form-novo-lancamento" novalidate>
       <div class="campo-formulario">
         <label>Tipo</label>
         <div class="grupo-tipo">
@@ -1075,20 +1135,34 @@ document.getElementById('botao-novo-lancamento').addEventListener('click', () =>
 
   // O formulário só existe no HTML depois que abrirModal() o inseriu,
   // então o addEventListener dele tem que ficar AQUI dentro.
+  const campoNovoDescricao = document.getElementById('campo-descricao');
+  const campoNovoValor = document.getElementById('campo-valor');
+  limparErroAoDigitar(campoNovoDescricao);
+  limparErroAoDigitar(campoNovoValor);
+
   document.getElementById('form-novo-lancamento').addEventListener('submit', (evento) => {
     evento.preventDefault(); // impede a página de recarregar (comportamento padrão de forms)
+    limparErrosDoFormulario(evento.target);
 
     const tipoEscolhido = document.querySelector('input[name="tipo"]:checked').value;
-    const descricao = document.getElementById('campo-descricao').value.trim();
+    const descricao = campoNovoDescricao.value.trim();
     const categoria = tipoEscolhido === 'receita' ? 'Receita' : document.getElementById('campo-categoria').value;
-    const valor = parseFloat(document.getElementById('campo-valor').value);
+    const valor = parseFloat(campoNovoValor.value);
     const recorrente = document.getElementById('campo-recorrente').checked;
     const data = document.getElementById('campo-data-lancamento').value || obterDataDeHoje();
+    let temErro = false;
 
-    if (!descricao || !valor || valor <= 0) {
-      mostrarToast('Preencha descrição e valor corretamente.');
-      return;
+    if (!descricao) {
+      mostrarErroCampo(campoNovoDescricao, 'Digite uma descrição.');
+      temErro = true;
     }
+
+    if (!valor || valor <= 0) {
+      mostrarErroCampo(campoNovoValor, 'Digite um valor maior que zero.');
+      temErro = true;
+    }
+
+    if (temErro) return;
 
     const botaoSalvar = evento.target.querySelector('button[type="submit"]');
 
@@ -1160,7 +1234,7 @@ function htmlFormularioEditarLancamento(dadosAtuais) {
     .join('');
 
   return `
-    <form id="form-editar-lancamento">
+    <form id="form-editar-lancamento" novalidate>
       <div class="campo-formulario">
         <label>Tipo</label>
         <div class="grupo-tipo">
@@ -1218,20 +1292,34 @@ telaMovimentacoes.addEventListener('click', (evento) => {
 
   abrirModal('Editar lançamento', htmlFormularioEditarLancamento(dadosAtuais));
 
+  const campoEditarDescricao = document.getElementById('campo-descricao-edicao');
+  const campoEditarValor = document.getElementById('campo-valor-edicao');
+  limparErroAoDigitar(campoEditarDescricao);
+  limparErroAoDigitar(campoEditarValor);
+
   // --- Salvar alterações ---
   document.getElementById('form-editar-lancamento').addEventListener('submit', (eventoSubmit) => {
     eventoSubmit.preventDefault();
+    limparErrosDoFormulario(eventoSubmit.target);
 
     const tipoNovo = document.querySelector('input[name="tipo-edicao"]:checked').value;
-    const descricaoNova = document.getElementById('campo-descricao-edicao').value.trim();
+    const descricaoNova = campoEditarDescricao.value.trim();
     const categoriaNova = tipoNovo === 'receita' ? 'Receita' : document.getElementById('campo-categoria-edicao').value;
-    const valorNovo = parseFloat(document.getElementById('campo-valor-edicao').value);
+    const valorNovo = parseFloat(campoEditarValor.value);
     const dataNova = document.getElementById('campo-data-edicao').value || dadosAtuais.data;
+    let temErro = false;
 
-    if (!descricaoNova || !valorNovo || valorNovo <= 0) {
-      mostrarToast('Preencha descrição e valor corretamente.');
-      return;
+    if (!descricaoNova) {
+      mostrarErroCampo(campoEditarDescricao, 'Digite uma descrição.');
+      temErro = true;
     }
+
+    if (!valorNovo || valorNovo <= 0) {
+      mostrarErroCampo(campoEditarValor, 'Digite um valor maior que zero.');
+      temErro = true;
+    }
+
+    if (temErro) return;
 
     const botaoSalvarEdicao = eventoSubmit.target.querySelector('button[type="submit"]');
 
@@ -1926,11 +2014,33 @@ function entrarNoApp(nome, email) {
 }
 
 // --- Formulário de login ---
+const campoLoginEmail = document.getElementById('login-email');
+const campoLoginSenha = document.getElementById('login-senha');
+limparErroAoDigitar(campoLoginEmail);
+limparErroAoDigitar(campoLoginSenha);
+
 document.getElementById('form-login').addEventListener('submit', (evento) => {
   evento.preventDefault();
+  limparErrosDoFormulario(evento.target);
 
-  const email = document.getElementById('login-email').value.trim();
-  if (!email) return;
+  const email = campoLoginEmail.value.trim();
+  const senha = campoLoginSenha.value;
+  let temErro = false;
+
+  if (!email) {
+    mostrarErroCampo(campoLoginEmail, 'Digite seu e-mail.');
+    temErro = true;
+  } else if (!emailValido(email)) {
+    mostrarErroCampo(campoLoginEmail, 'Digite um e-mail válido.');
+    temErro = true;
+  }
+
+  if (!senha) {
+    mostrarErroCampo(campoLoginSenha, 'Digite sua senha.');
+    temErro = true;
+  }
+
+  if (temErro) return;
 
   const botaoEntrar = evento.target.querySelector('button[type="submit"]');
 
@@ -1952,7 +2062,7 @@ document.getElementById('form-login').addEventListener('submit', (evento) => {
 function htmlFormularioEsqueciSenha() {
   return `
     <p class="texto-modal-aviso">Informe seu e-mail e simulamos o envio de um link de redefinição de senha.</p>
-    <form id="form-esqueceu-senha">
+    <form id="form-esqueceu-senha" novalidate>
       <div class="campo-formulario">
         <label for="recuperar-email">E-mail</label>
         <input type="email" id="recuperar-email" placeholder="voce@email.com" required>
@@ -1965,11 +2075,23 @@ function htmlFormularioEsqueciSenha() {
 document.getElementById('botao-esqueceu-senha').addEventListener('click', () => {
   abrirModal('Recuperar senha', htmlFormularioEsqueciSenha());
 
+  const campoRecuperarEmail = document.getElementById('recuperar-email');
+  limparErroAoDigitar(campoRecuperarEmail);
+
   document.getElementById('form-esqueceu-senha').addEventListener('submit', (evento) => {
     evento.preventDefault();
+    limparErrosDoFormulario(evento.target);
 
-    const email = document.getElementById('recuperar-email').value.trim();
-    if (!email) return;
+    const email = campoRecuperarEmail.value.trim();
+
+    if (!email) {
+      mostrarErroCampo(campoRecuperarEmail, 'Digite seu e-mail.');
+      return;
+    }
+    if (!emailValido(email)) {
+      mostrarErroCampo(campoRecuperarEmail, 'Digite um e-mail válido.');
+      return;
+    }
 
     const botaoEnviar = evento.target.querySelector('button[type="submit"]');
 
@@ -1981,12 +2103,44 @@ document.getElementById('botao-esqueceu-senha').addEventListener('click', () => 
 });
 
 // --- Formulário de cadastro ---
+const campoCadastroNome = document.getElementById('cadastro-nome');
+const campoCadastroEmail = document.getElementById('cadastro-email');
+const campoCadastroSenha = document.getElementById('cadastro-senha');
+limparErroAoDigitar(campoCadastroNome);
+limparErroAoDigitar(campoCadastroEmail);
+limparErroAoDigitar(campoCadastroSenha);
+
 document.getElementById('form-cadastro').addEventListener('submit', (evento) => {
   evento.preventDefault();
+  limparErrosDoFormulario(evento.target);
 
-  const nome = document.getElementById('cadastro-nome').value.trim();
-  const email = document.getElementById('cadastro-email').value.trim();
-  if (!nome || !email) return;
+  const nome = campoCadastroNome.value.trim();
+  const email = campoCadastroEmail.value.trim();
+  const senha = campoCadastroSenha.value;
+  let temErro = false;
+
+  if (!nome) {
+    mostrarErroCampo(campoCadastroNome, 'Digite seu nome.');
+    temErro = true;
+  }
+
+  if (!email) {
+    mostrarErroCampo(campoCadastroEmail, 'Digite seu e-mail.');
+    temErro = true;
+  } else if (!emailValido(email)) {
+    mostrarErroCampo(campoCadastroEmail, 'Digite um e-mail válido.');
+    temErro = true;
+  }
+
+  if (!senha) {
+    mostrarErroCampo(campoCadastroSenha, 'Crie uma senha.');
+    temErro = true;
+  } else if (senha.length < 6) {
+    mostrarErroCampo(campoCadastroSenha, 'A senha precisa ter pelo menos 6 caracteres.');
+    temErro = true;
+  }
+
+  if (temErro) return;
 
   const botaoCriarConta = evento.target.querySelector('button[type="submit"]');
 
