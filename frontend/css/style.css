@@ -1609,6 +1609,44 @@ html[data-tema="escuro"] .amostra-azul {
   color: var(--cor-negativa);
 }
 
+/* Lista de categorias customizáveis (card "Categorias", Planejamento) */
+.lista-categorias {
+  display: flex;
+  flex-direction: column;
+}
+
+.item-categoria {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--cor-borda);
+  background: none;
+  border-left: none;
+  border-right: none;
+  border-top: none;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--cor-texto);
+  cursor: pointer;
+  text-align: left;
+  transition: opacity 0.15s ease;
+}
+
+.item-categoria:active {
+  opacity: 0.7;
+}
+
+.item-categoria:last-child {
+  border-bottom: none;
+}
+
+.nome-item-categoria {
+  flex: 1;
+  font-weight: 500;
+}
+
 .estado-vazio-recorrentes {
   display: none;
   font-size: 12px;

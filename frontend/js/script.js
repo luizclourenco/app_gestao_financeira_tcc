@@ -463,17 +463,201 @@ const limitesPadrao = {
   'Outros': 300,
 };
 
-const CATEGORIAS_DE_DESPESA = ['Moradia', 'Alimentação', 'Transporte', 'Lazer', 'Saúde', 'Outros'];
+/*
+  Categorias customizáveis: a pessoa pode criar, renomear (trocando
+  ícone junto) e excluir categorias de despesa, em vez de ficar presa
+  nas 6 que vêm prontas. Cada categoria guarda { nome, icone, cor } —
+  "cor" é sempre uma das 6 cores já usadas no resto do app (ver
+  PALETA_CORES_CATEGORIA), escolhida sozinha quando a categoria é
+  criada, só pra garantir que sempre combina com o visual existente.
 
-// Mesmas cores já usadas nos ícones/barrinhas de categoria da Tela 1
-const corPorCategoria = {
-  'Moradia': 'moradia',
-  'Alimentação': 'alimentacao',
-  'Transporte': 'transporte',
-  'Lazer': 'lazer',
-  'Saúde': 'saude',
-  'Outros': 'outros',
-};
+  CATEGORIAS_DE_DESPESA, corPorCategoria e iconesPorCategoria (esse
+  último declarado mais abaixo, na PARTE 7) são os "mapas" que o
+  resto do app já usava antes de categoria ser customizável — pra não
+  precisar reescrever tudo que já lia deles, a gente mantém os MESMOS
+  array/objetos e só esvazia + repreenche eles (recalcularCategorias),
+  em vez de criar um novo com "=".
+*/
+const CHAVE_CATEGORIAS = 'meu-bolso:categorias';
+
+const PALETA_CORES_CATEGORIA = ['moradia', 'alimentacao', 'transporte', 'lazer', 'saude', 'outros'];
+
+// Ícones disponíveis pra escolher ao criar/editar uma categoria
+const ICONES_DISPONIVEIS_CATEGORIA = [
+  'fa-house', 'fa-cart-shopping', 'fa-gas-pump', 'fa-gamepad', 'fa-briefcase-medical',
+  'fa-ellipsis', 'fa-plane', 'fa-graduation-cap', 'fa-dumbbell', 'fa-paw',
+  'fa-gift', 'fa-mobile-screen', 'fa-piggy-bank', 'fa-utensils', 'fa-bus', 'fa-shirt',
+];
+
+const categoriasPadrao = [
+  { nome: 'Moradia', icone: 'fa-house', cor: 'moradia' },
+  { nome: 'Alimentação', icone: 'fa-cart-shopping', cor: 'alimentacao' },
+  { nome: 'Transporte', icone: 'fa-gas-pump', cor: 'transporte' },
+  { nome: 'Lazer', icone: 'fa-gamepad', cor: 'lazer' },
+  { nome: 'Saúde', icone: 'fa-briefcase-medical', cor: 'saude' },
+  { nome: 'Outros', icone: 'fa-ellipsis', cor: 'outros' },
+];
+
+function obterCategorias() {
+  const salvas = JSON.parse(localStorage.getItem(CHAVE_CATEGORIAS));
+  return (salvas && salvas.length > 0) ? salvas : categoriasPadrao;
+}
+
+function salvarCategorias(lista) {
+  localStorage.setItem(CHAVE_CATEGORIAS, JSON.stringify(lista));
+}
+
+const CATEGORIAS_DE_DESPESA = [];
+const corPorCategoria = {};
+
+// Esvazia e repreenche CATEGORIAS_DE_DESPESA/corPorCategoria/
+// iconesPorCategoria com as categorias atuais. Chamado uma vez no
+// carregamento da página e de novo toda vez que uma categoria é
+// criada, editada ou excluída.
+function recalcularCategorias() {
+  const categorias = obterCategorias();
+
+  CATEGORIAS_DE_DESPESA.length = 0;
+  Object.keys(corPorCategoria).forEach((chave) => delete corPorCategoria[chave]);
+  Object.keys(iconesPorCategoria).forEach((chave) => delete iconesPorCategoria[chave]);
+
+  categorias.forEach((categoria) => {
+    CATEGORIAS_DE_DESPESA.push(categoria.nome);
+    corPorCategoria[categoria.nome] = categoria.cor;
+    iconesPorCategoria[categoria.nome] = categoria.icone;
+  });
+
+  iconesPorCategoria['Receita'] = 'fa-sack-dollar'; // categoria especial, não é de despesa
+}
+
+/*
+  UI do card "Categorias" (Planejamento): lista + criar/editar/excluir.
+  Usa o mesmo modal genérico e o mesmo padrão de "clique de novo pra
+  confirmar" já usado em lançamento/meta/recorrente.
+*/
+const listaCategoriasElemento = document.getElementById('lista-categorias');
+
+function renderizarListaCategorias() {
+  const categorias = obterCategorias();
+
+  listaCategoriasElemento.innerHTML = categorias.map((categoria, indice) => `
+    <button type="button" class="item-categoria" data-indice="${indice}">
+      <span class="icone-categoria icone-categoria-inline" data-cor="${categoria.cor}">
+        <i class="fa-solid ${categoria.icone}"></i>
+      </span>
+      <span class="nome-item-categoria">${categoria.nome}</span>
+      <span class="seta-lancamento">›</span>
+    </button>
+  `).join('');
+}
+
+function htmlOpcoesIconeCategoria(iconeSelecionado) {
+  return ICONES_DISPONIVEIS_CATEGORIA.map((icone) => {
+    const nomeLegivel = icone.replace('fa-', '').replace(/-/g, ' ');
+    return `<option value="${icone}" ${icone === iconeSelecionado ? 'selected' : ''}>${nomeLegivel}</option>`;
+  }).join('');
+}
+
+function htmlFormularioCategoria(categoriaExistente) {
+  const iconeInicial = categoriaExistente ? categoriaExistente.icone : ICONES_DISPONIVEIS_CATEGORIA[0];
+
+  return `
+    <form id="form-categoria">
+      <div class="campo-formulario">
+        <label for="campo-nome-categoria">Nome</label>
+        <input type="text" id="campo-nome-categoria" placeholder="Ex: Pet, Assinaturas..." value="${categoriaExistente ? categoriaExistente.nome : ''}" required>
+      </div>
+
+      <div class="campo-formulario">
+        <label for="campo-icone-categoria">Ícone</label>
+        <select id="campo-icone-categoria">${htmlOpcoesIconeCategoria(iconeInicial)}</select>
+      </div>
+
+      <button type="submit" class="botao-primario">${categoriaExistente ? 'Salvar alterações' : 'Criar categoria'}</button>
+      ${categoriaExistente ? '<button type="button" class="botao-perigo" id="botao-excluir-categoria">Excluir categoria</button>' : ''}
+    </form>
+  `;
+}
+
+function abrirFormularioCategoria(categoriaExistente, indice) {
+  abrirModal(categoriaExistente ? 'Editar categoria' : 'Nova categoria', htmlFormularioCategoria(categoriaExistente));
+
+  document.getElementById('form-categoria').addEventListener('submit', (evento) => {
+    evento.preventDefault();
+
+    const nome = document.getElementById('campo-nome-categoria').value.trim();
+    const icone = document.getElementById('campo-icone-categoria').value;
+
+    if (!nome) {
+      mostrarToast('Dá um nome pra categoria.');
+      return;
+    }
+
+    const botaoSalvar = evento.target.querySelector('button[type="submit"]');
+
+    comLoadingBotao(botaoSalvar, () => {
+      const categorias = obterCategorias();
+
+      if (categoriaExistente) {
+        categorias[indice] = { ...categoriaExistente, nome, icone };
+      } else {
+        // Cor escolhida sozinha, ciclando pela paleta — não tem
+        // seletor de cor pra manter o formulário simples
+        const cor = PALETA_CORES_CATEGORIA[categorias.length % PALETA_CORES_CATEGORIA.length];
+        categorias.push({ nome, icone, cor });
+      }
+
+      salvarCategorias(categorias);
+      recalcularCategorias();
+      renderizarListaCategorias();
+      renderizarOrcamentoPorCategoria();
+      fecharModal();
+      mostrarToast(categoriaExistente ? 'Categoria atualizada! ✏️' : 'Categoria criada! 🎉');
+    });
+  });
+
+  if (categoriaExistente) {
+    const botaoExcluir = document.getElementById('botao-excluir-categoria');
+    let aguardandoConfirmacao = false;
+
+    botaoExcluir.addEventListener('click', () => {
+      const categorias = obterCategorias();
+
+      if (categorias.length <= 1) {
+        mostrarToast('Precisa ter pelo menos uma categoria.');
+        return;
+      }
+
+      if (!aguardandoConfirmacao) {
+        aguardandoConfirmacao = true;
+        botaoExcluir.textContent = 'Clique de novo para confirmar';
+        botaoExcluir.classList.add('botao-perigo-confirmando');
+        return;
+      }
+
+      categorias.splice(indice, 1);
+      salvarCategorias(categorias);
+      recalcularCategorias();
+      renderizarListaCategorias();
+      renderizarOrcamentoPorCategoria();
+      fecharModal();
+      mostrarToast('Categoria excluída. 🗑️');
+    });
+  }
+}
+
+listaCategoriasElemento.addEventListener('click', (evento) => {
+  const item = evento.target.closest('.item-categoria');
+  if (!item) return;
+
+  const indice = Number(item.getAttribute('data-indice'));
+  const categorias = obterCategorias();
+  abrirFormularioCategoria(categorias[indice], indice);
+});
+
+document.getElementById('botao-nova-categoria').addEventListener('click', () => {
+  abrirFormularioCategoria(null, null);
+});
 
 function obterLimitesCategoria() {
   const limitesSalvos = JSON.parse(localStorage.getItem(CHAVE_LIMITES_CATEGORIA)) || {};
@@ -756,17 +940,10 @@ const evolucaoSaldoExemplo = {
   ================================================
 */
 
-// Ícone simples por categoria, só pra ficar mais visual (poderia
-// virar um <select> de ícones no futuro)
-const iconesPorCategoria = {
-  'Alimentação': 'fa-cart-shopping',
-  'Transporte': 'fa-gas-pump',
-  'Moradia': 'fa-house',
-  'Lazer': 'fa-gamepad',
-  'Saúde': 'fa-briefcase-medical',
-  'Receita': 'fa-sack-dollar',
-  'Outros': 'fa-ellipsis',
-};
+// Ícone por categoria. Preenchido por recalcularCategorias() (PARTE
+// 6.5, mais acima) a partir das categorias customizáveis da pessoa —
+// fica vazio até essa função rodar, lá no fim da PARTE 7.
+const iconesPorCategoria = {};
 
 const listaHoje = document.getElementById('lista-hoje');
 const CHAVE_LOCALSTORAGE = 'meu-bolso:lancamentos-extras';
@@ -867,12 +1044,7 @@ function htmlFormularioNovoLancamento() {
       <div class="campo-formulario">
         <label for="campo-categoria">Categoria</label>
         <select id="campo-categoria">
-          <option>Alimentação</option>
-          <option>Transporte</option>
-          <option>Moradia</option>
-          <option>Lazer</option>
-          <option>Saúde</option>
-          <option>Outros</option>
+          ${obterCategorias().map((categoria) => `<option>${categoria.nome}</option>`).join('')}
         </select>
       </div>
 
@@ -945,6 +1117,11 @@ function carregarLancamentosSalvos() {
   lancamentosSalvos.forEach((dados) => adicionarLancamento(dados, false));
 }
 
+// Precisa rodar ANTES de carregar os lançamentos: é recalcularCategorias()
+// que preenche iconesPorCategoria, e construirNoLancamento() usa esse
+// mapa pra escolher o ícone de cada lançamento já na primeira pintura.
+recalcularCategorias();
+
 carregarLancamentosSalvos();
 
 // Primeira pintura dos cards de orçamento/recorrentes, já com os
@@ -954,6 +1131,7 @@ renderizarOrcamentoPorCategoria();
 renderizarOrcamentoMensal();
 renderizarRecorrentes();
 atualizarOpcoesFiltroMes(); // monta o seletor de mês com os meses que já existem
+renderizarListaCategorias();
 
 
 /*
@@ -977,9 +1155,8 @@ const telaMovimentacoes = document.getElementById('tela-movimentacoes');
 
 // Monta o formulário de edição, já preenchido com os dados atuais do item
 function htmlFormularioEditarLancamento(dadosAtuais) {
-  const categorias = ['Alimentação', 'Transporte', 'Moradia', 'Lazer', 'Saúde', 'Outros'];
-  const opcoesCategoria = categorias
-    .map((cat) => `<option ${cat === dadosAtuais.categoria ? 'selected' : ''}>${cat}</option>`)
+  const opcoesCategoria = obterCategorias()
+    .map((cat) => `<option ${cat.nome === dadosAtuais.categoria ? 'selected' : ''}>${cat.nome}</option>`)
     .join('');
 
   return `
