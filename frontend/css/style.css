@@ -830,6 +830,14 @@ html[data-privado="ativo"] .valor-sensivel {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  flex: 1; /* empurra o botão de editar perfil pro canto direito */
+  min-width: 0; /* permite o nome/e-mail truncar em vez de espremer o botão */
+}
+
+.info-perfil-conta strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .info-perfil-conta strong {

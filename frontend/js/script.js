@@ -2013,6 +2013,73 @@ function entrarNoApp(nome, email) {
   avatarUsuario.textContent = nome.trim().charAt(0).toUpperCase() || '?';
 }
 
+/*
+  --- Editar perfil ---
+  Botão de lápis no card "Conta" abre o mesmo modal genérico com um
+  formulário pré-preenchido (nome + e-mail). Salvar atualiza o
+  localStorage e repinta a saudação/avatar/card na hora, sem precisar
+  sair e entrar de novo.
+*/
+function htmlFormularioEditarPerfil(usuarioAtual) {
+  return `
+    <form id="form-editar-perfil" novalidate>
+      <div class="campo-formulario">
+        <label for="campo-nome-perfil">Nome</label>
+        <input type="text" id="campo-nome-perfil" value="${usuarioAtual.nome}" required>
+      </div>
+      <div class="campo-formulario">
+        <label for="campo-email-perfil">E-mail</label>
+        <input type="email" id="campo-email-perfil" value="${usuarioAtual.email || ''}" required>
+      </div>
+      <button type="submit" class="botao-primario">Salvar alterações</button>
+    </form>
+  `;
+}
+
+document.getElementById('botao-editar-perfil').addEventListener('click', () => {
+  const usuarioAtual = JSON.parse(localStorage.getItem(CHAVE_USUARIO)) || { nome: '', email: '' };
+
+  abrirModal('Editar perfil', htmlFormularioEditarPerfil(usuarioAtual));
+
+  const campoNomePerfil = document.getElementById('campo-nome-perfil');
+  const campoEmailPerfil = document.getElementById('campo-email-perfil');
+  limparErroAoDigitar(campoNomePerfil);
+  limparErroAoDigitar(campoEmailPerfil);
+
+  document.getElementById('form-editar-perfil').addEventListener('submit', (evento) => {
+    evento.preventDefault();
+    limparErrosDoFormulario(evento.target);
+
+    const nome = campoNomePerfil.value.trim();
+    const email = campoEmailPerfil.value.trim();
+    let temErro = false;
+
+    if (!nome) {
+      mostrarErroCampo(campoNomePerfil, 'Digite seu nome.');
+      temErro = true;
+    }
+
+    if (!email) {
+      mostrarErroCampo(campoEmailPerfil, 'Digite seu e-mail.');
+      temErro = true;
+    } else if (!emailValido(email)) {
+      mostrarErroCampo(campoEmailPerfil, 'Digite um e-mail válido.');
+      temErro = true;
+    }
+
+    if (temErro) return;
+
+    const botaoSalvar = evento.target.querySelector('button[type="submit"]');
+
+    comLoadingBotao(botaoSalvar, () => {
+      localStorage.setItem(CHAVE_USUARIO, JSON.stringify({ nome, email }));
+      entrarNoApp(nome, email);
+      fecharModal();
+      mostrarToast('Perfil atualizado! ✏️');
+    });
+  });
+});
+
 // --- Formulário de login ---
 const campoLoginEmail = document.getElementById('login-email');
 const campoLoginSenha = document.getElementById('login-senha');
