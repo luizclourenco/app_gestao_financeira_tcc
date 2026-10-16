@@ -1855,10 +1855,77 @@ function desenharGraficoCategorias() {
   });
 }
 
-// Atalhos de relatório (Mensal / Categorias / Comparativos)
+/*
+  Exporta pra CSV os lançamentos que estão VISÍVEIS na tela de
+  Movimentações agora — ou seja, já respeita os filtros de mês,
+  tipo (receita/despesa) e busca que a pessoa tiver escolhido. Isso
+  faz esse botão funcionar tanto como "exporta tudo" (sem filtro
+  nenhum) quanto como "exporta só Setembro" ou "só despesas", sem
+  precisar de uma tela separada só pra isso.
+*/
+function exportarLancamentosCSV() {
+  const lancamentosVisiveis = document.querySelectorAll('#tela-movimentacoes .lancamento:not(.lancamento-escondido)');
+
+  if (lancamentosVisiveis.length === 0) {
+    mostrarToast('Nenhum lançamento pra exportar com esse filtro 📄');
+    return;
+  }
+
+  const cabecalho = ['Data', 'Descrição', 'Categoria', 'Tipo', 'Valor (R$)'];
+
+  const linhas = [...lancamentosVisiveis].map((lancamento) => {
+    const data = lancamento.getAttribute('data-data') || '';
+    const tipo = lancamento.getAttribute('data-tipo') === 'receita' ? 'Receita' : 'Despesa';
+
+    // Clona a descrição e tira o ícone de "recorrente" (se tiver),
+    // porque só queremos o texto mesmo pro CSV.
+    const noDescricao = lancamento.querySelector('.info-lancamento strong').cloneNode(true);
+    noDescricao.querySelectorAll('i').forEach((icone) => icone.remove());
+    const descricao = noDescricao.textContent.trim();
+
+    const categoria = lancamento.querySelector('.categoria-lancamento').textContent.trim();
+
+    const valorAbsoluto = paraNumero(lancamento.querySelector('.valor-sensivel').textContent);
+    const valorComSinal = tipo === 'Despesa' ? -valorAbsoluto : valorAbsoluto;
+
+    return [data, descricao, categoria, tipo, valorComSinal.toFixed(2).replace('.', ',')];
+  });
+
+  // Ponto e vírgula (em vez de vírgula) porque é o separador que o
+  // Excel em português espera — com vírgula ele jogaria tudo numa
+  // coluna só.
+  const textoCSV = [cabecalho, ...linhas]
+    .map((colunas) => colunas.map((campo) => `"${String(campo).replace(/"/g, '""')}"`).join(';'))
+    .join('\n');
+
+  // O "﻿" no início (BOM) é o que faz o Excel abrir os acentos
+  // certinho em vez de virar "Descriç├úo".
+  const blob = new Blob(['﻿' + textoCSV], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+
+  const mesEscolhido = campoFiltroMes.value;
+  const sufixoArquivo = mesEscolhido === 'todos' ? obterDataDeHoje() : mesEscolhido;
+
+  const linkDownload = document.createElement('a');
+  linkDownload.href = url;
+  linkDownload.download = `movimentacoes-${sufixoArquivo}.csv`;
+  document.body.appendChild(linkDownload);
+  linkDownload.click();
+  linkDownload.remove();
+  URL.revokeObjectURL(url);
+
+  mostrarToast('Relatório exportado! 📄');
+}
+
+// Atalhos de relatório (Mensal / Categorias / Comparativos / Exportar)
 document.querySelectorAll('.atalho-relatorio').forEach((botao) => {
   botao.addEventListener('click', () => {
     const nomeRelatorio = botao.getAttribute('data-relatorio');
+
+    if (nomeRelatorio === 'Exportar') {
+      exportarLancamentosCSV();
+      return;
+    }
 
     if (nomeRelatorio === 'Categorias') {
       abrirModal('Relatório: Categorias', `
