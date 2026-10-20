@@ -2,7 +2,6 @@ import base64
 import hashlib
 import hmac
 import html
-import json
 import logging
 import os
 import secrets
@@ -10,9 +9,7 @@ from contextlib import asynccontextmanager, closing
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Literal
-from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlsplit
-from urllib.request import Request, urlopen
 
 from fastapi import Depends, FastAPI, HTTPException, Path, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -21,6 +18,7 @@ import jwt
 from pydantic import BaseModel, EmailStr, Field
 from psycopg2 import IntegrityError
 from psycopg2.extras import RealDictCursor
+import requests
 
 from database import get_db
 
@@ -186,13 +184,15 @@ def _garantir_tabela_tokens_recuperacao(cursor: RealDictCursor) -> None:
 
 
 def _enviar_email_recuperacao(email: str, token: str) -> None:
-    api_key = os.getenv("RESEND_API_KEY")
-    remetente = os.getenv("RESEND_FROM_EMAIL")
+    api_key = os.getenv("BREVO_API_KEY")
+    remetente = os.getenv("BREVO_FROM_EMAIL")
+    nome_remetente = os.getenv("BREVO_FROM_NAME", "Meu Bolso")
     frontend_url = os.getenv("FRONTEND_URL")
-    if not api_key or not remetente or not frontend_url:
-        raise RuntimeError(
-            "Configure RESEND_API_KEY, RESEND_FROM_EMAIL e FRONTEND_URL no backend."
+    if not api_key or not remetente or not remetente.strip() or not frontend_url:
+        logger.error(
+            "Configura\u00e7\u00e3o de e-mail ausente: BREVO_API_KEY, BREVO_FROM_EMAIL ou FRONTEND_URL."
         )
+        raise RuntimeError("O servi\u00e7o de e-mail n\u00e3o est\u00e1 configurado corretamente.")
 
     partes_url = urlsplit(frontend_url)
     if (
@@ -206,45 +206,52 @@ def _enviar_email_recuperacao(email: str, token: str) -> None:
     link = f"{frontend_url.rstrip('/')}/#reset_token={quote(token, safe='')}"
     link_seguro = html.escape(link, quote=True)
     corpo_texto = (
-        "Recebemos uma solicitação para redefinir a senha da sua conta Meu Bolso. "
-        f"Acesse este link em até 30 minutos: {link}"
+        "Recebemos uma solicita\u00e7\u00e3o para redefinir a senha da sua conta Meu Bolso. "
+        f"Acesse este link em at\u00e9 30 minutos: {link}"
     )
     corpo_html = (
-        "<p>Recebemos uma solicitação para redefinir a senha da sua conta Meu Bolso.</p>"
+        "<p>Recebemos uma solicita\u00e7\u00e3o para redefinir a senha da sua conta Meu Bolso.</p>"
         f'<p><a href="{link_seguro}">Redefinir minha senha</a></p>'
-        "<p>O link expira em 30 minutos. Se você não fez essa solicitação, ignore este e-mail.</p>"
+        "<p>O link expira em 30 minutos. Se voc\u00ea n\u00e3o fez esta solicita\u00e7\u00e3o, ignore este e-mail.</p>"
     )
-    payload = json.dumps(
-        {
-            "from": remetente,
-            "to": [email],
-            "subject": "Redefinição de senha - Meu Bolso",
-            "text": corpo_texto,
-            "html": corpo_html,
-        }
-    ).encode("utf-8")
-    requisicao = Request(
-        "https://api.resend.com/emails",
-        data=payload,
-        headers={
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json",
-        },
-        method="POST",
-    )
+    payload = {
+        "sender": {"name": nome_remetente, "email": remetente.strip()},
+        "to": [{"email": email}],
+        "subject": "Recupera\u00e7\u00e3o de Senha - Meu Bolso",
+        "textContent": corpo_texto,
+        "htmlContent": corpo_html,
+    }
 
     try:
-        with urlopen(requisicao, timeout=15) as resposta:
-            if not 200 <= resposta.status < 300:
-                raise RuntimeError(f"Resend respondeu com HTTP {resposta.status}.")
-    except HTTPError as erro:
-        logger.error("Resend recusou o envio de recuperação (HTTP %s).", erro.code)
-        raise RuntimeError("O serviço de e-mail recusou o envio.") from None
-    except (URLError, OSError):
-        logger.error("Não foi possível conectar ao serviço Resend.")
-        raise RuntimeError("Não foi possível conectar ao serviço de e-mail.") from None
+        resposta = requests.post(
+            "https://api.brevo.com/v3/smtp/email",
+            json=payload,
+            headers={
+                "accept": "application/json",
+                "api-key": api_key,
+                "content-type": "application/json",
+            },
+            timeout=15,
+        )
+    except requests.RequestException as erro:
+        logger.error(
+            "Nao foi possivel conectar ao servico Brevo: %s", erro.__class__.__name__
+        )
+        raise RuntimeError("Nao foi possivel conectar ao servico de e-mail.") from None
 
+    if resposta.status_code not in (200, 201, 202):
+        logger.error("Brevo recusou o envio do e-mail (HTTP %s).", resposta.status_code)
+        raise RuntimeError("O servico de e-mail recusou o envio.")
 
+    try:
+        resposta_brevo = resposta.json()
+    except ValueError:
+        resposta_brevo = {}
+    logger.info(
+        "Brevo aceitou e-mail de recuperacao (HTTP %s, messageId=%s).",
+        resposta.status_code,
+        resposta_brevo.get("messageId", "indisponivel"),
+    )
 MENSAGEM_RECUPERACAO = (
     "Se o e-mail estiver cadastrado, enviaremos instruções para recuperar a senha."
 )
@@ -308,11 +315,14 @@ def solicitar_recuperacao_senha(solicitacao: SolicitarRecuperacaoSenha):
                 "DELETE FROM tokens_recuperacao_senha WHERE expira_em < NOW() - INTERVAL '1 day'"
             )
             cursor.execute(
-                "SELECT id FROM usuarios WHERE email = %s FOR UPDATE",
+                "SELECT id FROM usuarios WHERE LOWER(email) = LOWER(%s) FOR UPDATE",
                 (solicitacao.email,),
             )
             usuario = cursor.fetchone()
             if not usuario:
+                logger.info(
+                    "Solicitação de recuperação concluída sem envio: conta não localizada."
+                )
                 conn.commit()
                 return {"mensagem": MENSAGEM_RECUPERACAO}
 
@@ -327,6 +337,9 @@ def solicitar_recuperacao_senha(solicitacao: SolicitarRecuperacaoSenha):
                 (usuario["id"],),
             )
             if cursor.fetchone():
+                logger.info(
+                    "Solicitação de recuperação ignorada pelo limite de uma por minuto."
+                )
                 conn.commit()
                 return {"mensagem": MENSAGEM_RECUPERACAO}
 
@@ -340,6 +353,7 @@ def solicitar_recuperacao_senha(solicitacao: SolicitarRecuperacaoSenha):
         conn.commit()
 
     try:
+        logger.info("Enviando e-mail de recuperação pelo Brevo.")
         _enviar_email_recuperacao(str(solicitacao.email), token)
     except RuntimeError as erro:
         with closing(get_db()) as conn:
