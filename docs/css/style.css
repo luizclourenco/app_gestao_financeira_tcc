@@ -1,0 +1,1983 @@
+/* ================================================
+   VARIÁVEIS DE COR
+   Deixamos as cores como "variáveis" (--nome) pra não
+   ficar repetindo o código de cor em todo lugar.
+
+   Agora existem DOIS "eixos" independentes, controlados por dois
+   atributos na tag <html> (o JavaScript troca os dois):
+     - data-esquema="vinho" ou "azul"   → a IDENTIDADE de cor do app
+     - data-tema="claro" ou "escuro"    → claro/escuro, dentro de
+                                           qualquer esquema escolhido
+
+   Isso dá 4 combinações (vinho-claro, vinho-escuro, azul-claro,
+   azul-escuro), cada uma com seu próprio bloco de variáveis abaixo.
+   Só o dourado (metas), verde/vermelho (receita/despesa) e a fonte
+   continuam fixos — são cores "funcionais", não de identidade.
+   ================================================ */
+:root {
+  /* Cores que NÃO mudam com o esquema escolhido (são "funcionais",
+     não fazem parte da identidade visual de cada tema) */
+  --cor-acento: #C99A3E;           /* dourado — metas, conquistas, destaques especiais */
+  --cor-acento-fundo: #F6ECD6;
+  --cor-positiva: #2F9E6E;         /* verde - receitas */
+  --cor-positiva-fundo: #E6F4ED;
+  --cor-negativa: #B5473A;         /* terracota avermelhado - despesas */
+  --cor-negativa-fundo: #F8E9E6;
+  --cor-texto-inverso: #FFFFFF;    /* texto branco fixo, para usar em cima de fundo colorido */
+  /* Fundo da "mesa" atrás do celular: sempre branco, não importa o
+     esquema (vinho/azul) nem o tema (claro/escuro) — é só o cenário
+     ao redor do aparelho, não faz parte da identidade visual do app */
+  --cor-fundo-pagina: #FFFFFF;
+
+  --fonte-destaque: 'Fraunces', serif; /* usada só em números grandes e títulos — dá personalidade */
+
+  --raio-card: 16px;
+  --sombra-card: 0 1px 3px rgba(27, 36, 24, 0.07), 0 1px 2px rgba(27, 36, 24, 0.05);
+}
+
+/*
+  ESQUEMA "VINHO" (claro) — o padrão, usado se nenhum atributo
+  data-esquema ainda foi definido (primeiro acesso de alguém).
+  Remete a couro de carteira, por isso o nome do app "Meu Bolso".
+*/
+:root,
+html[data-esquema="vinho"] {
+  --cor-primaria: #7A3042;
+  --cor-primaria-escura: #4A1D28;  /* usado no gradiente do card de saldo */
+  --cor-primaria-clara: #F3E1E3;
+  --cor-texto: #231A1C;            /* preto levemente avinhado, não preto puro */
+  --cor-texto-suave: #786A6C;
+  /* Fundo com um tom de vinho de verdade, não um bege/cinza neutro
+     que poderia ser confundido com o esquema azul */
+  --cor-fundo: #F7EBEA;
+  --cor-branco: #FFF8F7;           /* branco levemente quente — fundo dos cards */
+  --cor-borda: #EBD9D7;
+}
+
+/* ESQUEMA "VINHO" (escuro) */
+html[data-esquema="vinho"][data-tema="escuro"] {
+  --cor-primaria: #A6465A;
+  /* No modo claro, o gradiente do card de saldo vai de #7A3042 até
+     #4A1D28 (escurece). No escuro, antes, usava esse MESMO #4A1D28
+     como ponta escura — só que como o fundo já é escuro, o card
+     acabava parecendo "a mesma cor" nos dois temas. Agora a ponta
+     escura também muda: no escuro ela fica mais clara/viva (usa o
+     tom que era a cor "clara" no tema claro), então o card inteiro
+     fica visivelmente diferente entre claro e escuro. */
+  --cor-primaria-escura: #7A3042;
+  --cor-primaria-clara: #3A1E24;
+  --cor-texto: #F0EAE8;
+  --cor-texto-suave: #BBA4A8;
+  /* Fundo escuro puxado pro vinho/borgonha, não um cinza-marrom
+     neutro que ficaria parecido com o fundo escuro do esquema azul */
+  --cor-fundo: #200F14;
+  --cor-branco: #2E161C;
+  --cor-borda: #45232B;
+}
+
+/*
+  ESQUEMA "AZUL" (claro) — uma identidade bem diferente da vinho:
+  azul-marinho profundo (mais sóbrio que o azul genérico de app
+  corporativo) sobre um fundo frio neutro, em vez do bege quente.
+*/
+html[data-esquema="azul"] {
+  --cor-primaria: #2A4D7A;
+  --cor-primaria-escura: #152A47;
+  --cor-primaria-clara: #DCE6F2;
+  --cor-texto: #16212E;
+  --cor-texto-suave: #5A6B80;
+  /* Fundo com um tom de azul de verdade, não um cinza neutro que
+     poderia ser confundido com o esquema vinho */
+  --cor-fundo: #E7EFF9;
+  --cor-branco: #FAFCFF;
+  --cor-borda: #D3E0EF;
+}
+
+/* ESQUEMA "AZUL" (escuro) */
+html[data-esquema="azul"][data-tema="escuro"] {
+  --cor-primaria: #4D7AB8;
+  /* Mesma lógica do vinho escuro: a ponta escura do gradiente do
+     card de saldo usa o tom que era a cor "primária" no tema claro,
+     em vez de repetir o mesmo #152A47 escuro dos dois temas. */
+  --cor-primaria-escura: #2A4D7A;
+  --cor-primaria-clara: #1C2C3E;
+  --cor-texto: #EBEEF2;
+  --cor-texto-suave: #93A6BE;
+  /* Fundo escuro puxado pro azul-marinho, não um cinza/preto neutro
+     que ficaria parecido com o fundo escuro do esquema vinho */
+  --cor-fundo: #0A121F;
+  --cor-branco: #142A47;
+  --cor-borda: #223A57;
+}
+
+/*
+  O dourado/verde/vermelho também precisam de uma versão mais
+  escura de fundo no modo escuro (não dependem do esquema, só do
+  tema claro/escuro) — por isso ficam num bloco à parte, pelo
+  atributo data-tema sozinho.
+*/
+html[data-tema="escuro"] {
+  --cor-acento: #D9AE5C;
+  --cor-acento-fundo: #3A2F18;
+  --cor-positiva-fundo: #163024;
+  --cor-negativa-fundo: #3A1E18;
+}
+
+/* Reset básico: tira margens e paddings padrão do navegador */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/*
+  Tira aquele "quadrado" azul/preto que o navegador desenha em volta
+  de um botão depois que ele é clicado (o nome técnico é "contorno
+  de foco"). Só tiramos quando o foco veio do MOUSE/toque
+  (:focus:not(:focus-visible)) — se a pessoa estiver navegando pelo
+  teclado com Tab, o contorno continua aparecendo normalmente, o que
+  é importante pra acessibilidade.
+*/
+button:focus:not(:focus-visible),
+a:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Contorno customizado (mais discreto, na cor do app) pra quem usa
+   o teclado pra navegar, em vez do azul feio padrão do navegador */
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--cor-primaria);
+  outline-offset: 2px;
+}
+
+/*
+  html e body com altura 100% + overflow hidden = a janela do
+  navegador NÃO vai ter barra de rolagem própria. Quem vai rolar
+  é só o conteúdo de dentro do "celular" (explicado mais abaixo).
+*/
+html, body {
+  height: 100%;
+}
+
+body {
+  font-family: 'Inter', -apple-system, sans-serif;
+  background-color: var(--cor-fundo-pagina);
+  color: var(--cor-texto);
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: background-color 0.2s ease; /* troca suave entre os temas */
+}
+
+/* ================================================
+   CONTAINER DO APP (simula a tela de um celular)
+   Se ajusta ao tamanho da janela do navegador, até um
+   limite máximo (pra não ficar gigante em monitor grande).
+   ================================================ */
+.app-container {
+  width: 100%;
+  max-width: 420px;
+  height: 100vh;
+  max-height: 100vh;
+  background-color: var(--cor-fundo);
+  position: relative;
+  border-radius: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+@media (min-width: 441px) {
+  .app-container {
+    height: 90vh;
+    max-height: 844px;
+
+    /* Moldura preta grossa, tipo bezel de iPhone */
+    border-radius: 56px;
+    border: 14px solid #0B0B0D;
+
+    /* Sombra dupla: uma suave espalhada (dá profundidade),
+       e uma "inset" bem fina (dá um brilho na borda do vidro) */
+    box-shadow:
+      0 30px 60px -10px rgba(0, 0, 0, 0.45),
+      0 10px 20px rgba(0, 0, 0, 0.25),
+      inset 0 0 0 2px rgba(255, 255, 255, 0.06);
+  }
+
+  /*
+    A "Dynamic Island": uma pílula preta fixa no topo, por cima
+    do conteúdo. É só um ::before (elemento "fantasma" criado via
+    CSS, sem precisar de HTML extra) posicionado no centro.
+  */
+  .app-container::before {
+    content: "";
+    position: absolute;
+    top: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100px;
+    height: 30px;
+    background: #0B0B0D;
+    border-radius: 20px;
+    z-index: 100; /* sempre por cima de qualquer card */
+  }
+}
+
+/* ================================================
+   TELAS (Resumo / Movimentações / Planejamento)
+   Por padrão toda tela fica escondida (display: none).
+   Só a que tiver a classe "tela-ativa" aparece.
+
+   Como .app-container agora é "display: flex; flex-direction: column",
+   a tela ativa vira um "flex item" que cresce (flex: 1) e tem seu
+   próprio scroll (overflow-y: auto). Assim, só o miolo rola —
+   o resto da janela do navegador fica parado.
+   ================================================ */
+.tela {
+  display: none;
+  flex: 1;
+  min-height: 0; /* truque essencial do flexbox: sem isso, o item nunca "encolhe" pra caber, e o scroll não funciona */
+  overflow-y: auto;
+  position: relative; /* necessário pra o skeleton (abaixo) poder cobrir só esta tela */
+  padding: 20px 16px 90px; /* 90px embaixo = espaço pro menu inferior não tampar o conteúdo */
+
+  /* Barra de rolagem invisível no Firefox (o "none" some com ela de
+     vez, mas o scroll com o mouse/toque continua funcionando normal) */
+  scrollbar-width: none;
+}
+
+/* Barra de rolagem invisível no Chrome/Edge/Safari (baseados em Webkit) */
+.tela::-webkit-scrollbar {
+  display: none;
+}
+
+@media (min-width: 441px) {
+  .tela {
+    padding-top: 40px; /* espaço extra pra não ficar atrás da Dynamic Island */
+  }
+}
+
+.tela-ativa {
+  display: block;
+}
+
+/*
+  Duas animações, uma pra cada direção. O JavaScript decide qual
+  classe (.anim-direita ou .anim-esquerda) colocar na tela, de
+  acordo com se você está "avançando" ou "voltando" nas abas.
+*/
+.anim-direita {
+  animation: entrada-pela-direita 0.25s ease;
+}
+
+.anim-esquerda {
+  animation: entrada-pela-esquerda 0.25s ease;
+}
+
+@keyframes entrada-pela-direita {
+  from { opacity: 0; transform: translateX(18px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes entrada-pela-esquerda {
+  from { opacity: 0; transform: translateX(-18px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+/* ================================================
+   CABEÇALHO
+   ================================================ */
+.cabecalho {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+}
+
+.saudacao {
+  font-size: 14px;
+  color: var(--cor-texto-suave);
+}
+
+.titulo-tela {
+  font-family: var(--fonte-destaque);
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.botao-icone {
+  background: var(--cor-branco);
+  border: 1px solid var(--cor-borda);
+  border-radius: 12px;
+  width: 40px;
+  height: 40px;
+  font-size: 16px;
+  cursor: pointer;
+  color: var(--cor-texto); /* botões não herdam a cor do texto sozinhos, por isso precisamos forçar aqui */
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.botao-icone:hover {
+  box-shadow: var(--sombra-card);
+}
+
+.botao-icone:active {
+  transform: scale(0.92);
+}
+
+/* ================================================
+   CARDS (a "caixinha branca" usada em quase tudo)
+   ================================================ */
+.card {
+  background-color: var(--cor-branco);
+  border-radius: var(--raio-card);
+  box-shadow: var(--sombra-card);
+  padding: 18px;
+  margin-bottom: 16px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+/* Leve "levantada" ao passar o mouse, só pra dar vida (toque/tap já
+   dispara o :active abaixo em celulares, que não têm hover de verdade) */
+.card:hover {
+  /* "levanta" o card visualmente (sobe 3px) + sombra bem mais forte,
+     pra ficar óbvio que ele reagiu ao mouse */
+  transform: translateY(-3px);
+  box-shadow: 0 10px 24px rgba(16, 24, 40, 0.18);
+}
+
+.card:active {
+  transform: scale(0.98);
+}
+
+.card-cabecalho {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.card-titulo {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.rotulo {
+  font-size: 13px;
+  color: var(--cor-texto-suave);
+}
+
+.placeholder {
+  text-align: center;
+  color: var(--cor-texto-suave);
+  padding: 40px 18px;
+}
+
+/* ================================================
+   CARD DE SALDO
+   ================================================ */
+.card-saldo {
+  background: linear-gradient(135deg, var(--cor-primaria), var(--cor-primaria-escura));
+  color: var(--cor-texto-inverso);
+}
+
+.card-saldo .rotulo {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.card-saldo-topo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.botao-olho {
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+}
+
+.valor-saldo {
+  font-family: var(--fonte-destaque);
+  font-size: 34px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.data-saldo {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+/* ================================================
+   GRID DE DUAS COLUNAS (Receitas / Despesas)
+   ================================================ */
+.grid-duas-colunas {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.card-mini {
+  margin-bottom: 0;
+}
+
+.linha-valor {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+}
+
+.valor-positivo { color: var(--cor-positiva); }
+.valor-negativo { color: var(--cor-negativa); }
+
+.selo {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+}
+
+.selo-positivo {
+  background-color: var(--cor-positiva-fundo);
+  color: var(--cor-positiva);
+}
+
+.selo-negativo {
+  background-color: var(--cor-negativa-fundo);
+  color: var(--cor-negativa);
+}
+
+/* ================================================
+   SELETOR DE MÊS
+   ================================================ */
+.seletor-mes {
+  border: 1px solid var(--cor-borda);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--cor-texto);
+  background: var(--cor-fundo);
+}
+
+/* ================================================
+   RESUMO DO MÊS + GRÁFICO DONUT (feito em CSS puro)
+   ================================================ */
+.resumo-mes-conteudo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.resumo-mes-textos p {
+  font-size: 13px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ponto {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.ponto-receita { background-color: var(--cor-positiva); }
+.ponto-despesa { background-color: var(--cor-negativa); }
+
+.saldo-mes {
+  font-size: 13px;
+  color: var(--cor-texto-suave);
+}
+
+/*
+  Esse é o truque do gráfico donut:
+  "conic-gradient" pinta o círculo em fatias, como se fosse
+  um relógio. Usamos a variável --percentual (definida no HTML,
+  em "style") pra saber até onde pintar de azul.
+*/
+.donut {
+  --percentual: 0;
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: conic-gradient(
+    var(--cor-primaria) calc(var(--percentual) * 1%),
+    var(--cor-borda) 0
+  );
+}
+
+.donut-texto {
+  background: var(--cor-branco);
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.legenda-donut {
+  text-align: right;
+  font-size: 12px;
+  color: var(--cor-texto-suave);
+  margin-top: 8px;
+}
+
+/* ================================================
+   LISTA DE CATEGORIAS
+   ================================================ */
+.link-ver-todas {
+  font-size: 13px;
+  color: var(--cor-primaria);
+  text-decoration: none;
+}
+
+.lista-categorias {
+  list-style: none;
+}
+
+.item-categoria {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.item-categoria:last-child {
+  margin-bottom: 0;
+}
+
+.icone-categoria {
+  width: 36px;
+  height: 36px;
+  background: var(--cor-primaria-clara);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+/* Versão pequena, usada inline dentro de texto (modal "Ver todas") */
+.icone-categoria-inline {
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  font-size: 11px;
+  display: inline-flex;
+  vertical-align: middle;
+  margin-right: 2px;
+}
+
+/*
+  Cada categoria tem sua própria cor (em vez de todas usarem o
+  mesmo azul/verde genérico) — ajuda a reconhecer cada uma de
+  relance, sem precisar ler o texto. As cores do modo escuro usam
+  os mesmos tons, só mais escuros/dessaturados no fundo e mais
+  claros no ícone, pra manter contraste legível nos dois temas.
+*/
+.icone-categoria[data-cor="moradia"] { background: #F3E4DB; color: #A85A39; }
+.icone-categoria[data-cor="alimentacao"] { background: #F7E9CE; color: #B9802A; }
+.icone-categoria[data-cor="transporte"] { background: #E2E9F0; color: #44617F; }
+.icone-categoria[data-cor="lazer"] { background: #EDE3F3; color: #7450A0; }
+.icone-categoria[data-cor="saude"] { background: #DCF0EC; color: #2E7E72; }
+.icone-categoria[data-cor="outros"] { background: #EAE7E0; color: #7D7468; }
+
+html[data-tema="escuro"] .icone-categoria[data-cor="moradia"] { background: #3A2A20; color: #E0A17D; }
+html[data-tema="escuro"] .icone-categoria[data-cor="alimentacao"] { background: #3D3115; color: #E8C27A; }
+html[data-tema="escuro"] .icone-categoria[data-cor="transporte"] { background: #212E3A; color: #9DBAD6; }
+html[data-tema="escuro"] .icone-categoria[data-cor="lazer"] { background: #2D2238; color: #C6A8E0; }
+html[data-tema="escuro"] .icone-categoria[data-cor="saude"] { background: #15322C; color: #7FD1C0; }
+html[data-tema="escuro"] .icone-categoria[data-cor="outros"] { background: #2E2B24; color: #BDB6A8; }
+
+/* Barrinha de progresso de cada categoria usa a mesma cor do ícone,
+   em vez do azul/verde genérico padrão */
+.barra-progresso-preenchida[data-cor="moradia"] { background: #BF6E4D; }
+.barra-progresso-preenchida[data-cor="alimentacao"] { background: #D9A23B; }
+.barra-progresso-preenchida[data-cor="transporte"] { background: #5B7A9D; }
+.barra-progresso-preenchida[data-cor="lazer"] { background: #8C6BAE; }
+.barra-progresso-preenchida[data-cor="saude"] { background: #3E9C8F; }
+.barra-progresso-preenchida[data-cor="outros"] { background: #9B9388; }
+.barra-progresso-preenchida[data-cor="meta"] { background: var(--cor-acento); }
+
+.info-categoria {
+  flex: 1;
+}
+
+.linha-categoria-topo {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.barra-progresso {
+  width: 100%;
+  height: 6px;
+  background: var(--cor-borda);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.barra-progresso-preenchida {
+  height: 100%;
+  background: var(--cor-primaria);
+  border-radius: 4px;
+}
+
+.porcentagem-categoria {
+  font-size: 12px;
+  color: var(--cor-texto-suave);
+  flex-shrink: 0;
+}
+
+/* ================================================
+   MENU INFERIOR (barra fixa embaixo)
+   ================================================ */
+.menu-inferior {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  background: var(--cor-branco);
+  border-top: 1px solid var(--cor-borda);
+  padding: 10px 0 14px;
+}
+
+.item-menu {
+  flex: 1;
+  background: none;
+  border: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--cor-texto-suave);
+  cursor: pointer;
+  font-family: inherit;
+  transition: transform 0.15s ease, color 0.15s ease;
+}
+
+.item-menu:active {
+  transform: scale(0.9);
+}
+
+.icone-menu {
+  font-size: 18px;
+}
+
+.item-menu-ativo {
+  color: var(--cor-primaria);
+  font-weight: 600;
+}
+
+/*
+  Botão flutuante (FAB) de "novo lançamento". Fica "flutuando" por
+  cima do conteúdo, sempre no mesmo lugar, pra pessoa não precisar
+  rolar a tela até achar o botão normal. position: absolute aqui
+  funciona porque o .app-container (o "pai" dele) tem
+  position: relative.
+*/
+.botao-fab {
+  position: absolute;
+  right: 20px;
+  bottom: 86px; /* fica acima do menu inferior */
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--cor-primaria);
+  color: var(--cor-texto-inverso);
+  border: none;
+  font-size: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  z-index: 40;
+  transition: transform 0.15s ease, opacity 0.15s ease, visibility 0.15s ease;
+}
+
+.botao-fab:hover {
+  transform: scale(1.05);
+}
+
+.botao-fab:active {
+  transform: scale(0.92);
+}
+
+/* Escondido na tela de Planejamento (lá o FAB não faz sentido, não
+   tem lançamento pra adicionar por lá) e na tela de login. */
+.botao-fab-escondido {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* ================================================
+   SKELETON LOADING
+   ================================================
+   É aquele efeito de "barrinhas cinzas piscando" que apps de
+   verdade mostram por um instante enquanto os dados carregam.
+   Como nosso app ainda não busca nada de um servidor de verdade,
+   isso é só pra dar a SENSAÇÃO de carregamento — por baixo, o
+   conteúdo real já está pronto, só escondido.
+*/
+
+.skeleton-overlay {
+  display: none; /* só aparece quando a tela ganha a classe .tela-carregando */
+  position: absolute;
+  inset: 0;
+  background: var(--cor-fundo);
+  padding: 20px 16px;
+  z-index: 60;
+}
+
+.tela-carregando .skeleton-overlay {
+  display: block;
+}
+
+/*
+  Enquanto o skeleton está visível, escondemos o conteúdo real por
+  baixo dele (ele já estaria lá, só não precisa aparecer por trás).
+*/
+.tela-carregando > *:not(.skeleton-overlay) {
+  visibility: hidden;
+}
+
+.skeleton-bloco {
+  border-radius: 14px;
+  margin-bottom: 16px;
+  background: linear-gradient(
+    100deg,
+    var(--cor-borda) 30%,
+    var(--cor-fundo-pagina) 50%,
+    var(--cor-borda) 70%
+  );
+  background-size: 300% 100%;
+  animation: brilho-skeleton 1.3s ease-in-out infinite;
+}
+
+@keyframes brilho-skeleton {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+
+/* ================================================
+   MODO PRIVADO (esconder todos os números)
+   ================================================
+   Toda vez que um valor em dinheiro ou porcentagem aparece em
+   algum lugar do app, a gente marca o elemento com a classe
+   "valor-sensivel". Quando o modo privado está ativo (atributo
+   data-privado="ativo" na tag <html>), essa regra borra (blur)
+   TODOS eles de uma vez, sem precisar trocar o texto de cada um.
+*/
+.valor-sensivel {
+  transition: filter 0.2s ease;
+}
+
+html[data-privado="ativo"] .valor-sensivel {
+  filter: blur(7px);
+  user-select: none; /* impede de selecionar/copiar o texto borrado */
+}
+
+/* Linha de perfil no card "Conta": avatar + nome/e-mail */
+.perfil-conta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.avatar-usuario {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--cor-primaria);
+  color: var(--cor-texto-inverso);
+  font-family: var(--fonte-destaque);
+  font-size: 18px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  text-transform: uppercase;
+}
+
+.info-perfil-conta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1; /* empurra o botão de editar perfil pro canto direito */
+  min-width: 0; /* permite o nome/e-mail truncar em vez de espremer o botão */
+}
+
+.info-perfil-conta strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.info-perfil-conta strong {
+  font-size: 14px;
+}
+
+/* Botão de ação perigosa (excluir) */
+.botao-perigo {
+  width: 100%;
+  margin-top: 10px;
+  background: transparent;
+  border: 1px solid var(--cor-negativa);
+  color: var(--cor-negativa);
+  border-radius: 12px;
+  padding: 14px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+/* Estado depois do primeiro clique, pedindo confirmação */
+.botao-perigo-confirmando {
+  background: var(--cor-negativa);
+  color: var(--cor-texto-inverso);
+}
+
+/* ================================================
+   TELA DE LOGIN / CADASTRO
+   ================================================
+   Fica por cima de TUDO (z-index bem alto) até a pessoa entrar.
+   Quando o JavaScript considera "logado", adiciona a classe
+   .tela-auth-escondida, que simplesmente tira ela da tela.
+*/
+.tela-auth {
+  position: absolute;
+  inset: 0;
+  z-index: 500;
+  background: var(--cor-fundo);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 24px;
+  overflow-y: auto;
+  scrollbar-width: none; /* esconde a barra de rolagem (Firefox) */
+}
+
+.tela-auth::-webkit-scrollbar {
+  display: none; /* esconde a barra de rolagem (Chrome/Edge/Safari) */
+}
+
+.tela-auth-escondida {
+  display: none;
+}
+
+.auth-conteudo {
+  width: 100%;
+  max-width: 320px;
+}
+
+.auth-logo {
+  width: 64px;
+  height: 64px;
+  background: var(--cor-primaria);
+  color: var(--cor-texto-inverso);
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  margin: 0 auto 16px;
+}
+
+.auth-titulo {
+  font-family: var(--fonte-destaque);
+  text-align: center;
+  font-size: 26px;
+  font-weight: 600;
+}
+
+.auth-subtitulo {
+  text-align: center;
+  font-size: 13px;
+  color: var(--cor-texto-suave);
+  margin-bottom: 24px;
+}
+
+/* Abas "Entrar" / "Criar conta" */
+/*
+  Seletor de esquema de cor: um grupo de botões circulares, cada um
+  mostrando uma prévia da cor daquele tema. O selecionado ganha um
+  anel ao redor (igual um "radio button" visual).
+*/
+.seletor-esquema {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.opcao-esquema {
+  background: none;
+  border: none;
+  padding: 3px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.opcao-esquema:active {
+  transform: scale(0.92);
+}
+
+.opcao-esquema-ativa {
+  border-color: var(--cor-texto-suave);
+}
+
+.amostra-esquema {
+  display: block;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+}
+
+/* Cores fixas (não usam variável) — são a PRÉVIA de cada esquema,
+   então precisam mostrar a cor de verdade mesmo que esse esquema
+   não esteja ativo agora. Como o tom "primária" de cada esquema
+   muda entre claro/escuro (ver variáveis lá em cima), a prévia
+   também muda com html[data-tema="escuro"] — senão as duas bolinhas
+   ficam com a mesma cara independente do tema, e dá a impressão de
+   que claro e escuro são a "mesma cor". */
+.amostra-vinho {
+  background: linear-gradient(135deg, #7A3042, #4A1D28);
+}
+
+html[data-tema="escuro"] .amostra-vinho {
+  /* mesmo gradiente do card de saldo no modo escuro (ver --cor-primaria-escura) */
+  background: linear-gradient(135deg, #A6465A, #7A3042);
+}
+
+.amostra-azul {
+  background: linear-gradient(135deg, #2A4D7A, #152A47);
+}
+
+html[data-tema="escuro"] .amostra-azul {
+  background: linear-gradient(135deg, #4D7AB8, #2A4D7A);
+}
+
+.auth-abas {
+  display: flex;
+  gap: 8px;
+  background: var(--cor-branco);
+  border: 1px solid var(--cor-borda);
+  padding: 6px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+}
+
+.auth-aba {
+  flex: 1;
+  border: none;
+  background: none;
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--cor-texto-suave);
+  cursor: pointer;
+}
+
+.auth-aba-ativa {
+  background: var(--cor-primaria);
+  color: var(--cor-texto-inverso);
+  font-weight: 600;
+}
+
+.auth-form-escondido {
+  display: none;
+}
+
+.auth-aviso {
+  text-align: center;
+  font-size: 11px;
+  color: var(--cor-texto-suave);
+  margin-top: 18px;
+  line-height: 1.4;
+}
+
+/* ================================================
+   ONBOARDING DE BOAS-VINDAS
+   ================================================
+   Reaproveita a base visual de .tela-auth (overlay cobrindo tudo),
+   só muda o conteúdo de dentro: 3 "slides" empilhados no mesmo
+   lugar, um de cada vez (igual os formulários de login/cadastro
+   fazem com .auth-form-escondido).
+   ================================================ */
+.link-pular-onboarding {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--cor-texto-suave);
+  cursor: pointer;
+  padding: 8px;
+}
+
+.onboarding-conteudo {
+  width: 100%;
+  max-width: 320px;
+  text-align: center;
+}
+
+.onboarding-slide {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  animation: entrada-pela-direita 0.25s ease;
+}
+
+.onboarding-slide-ativa {
+  display: flex;
+}
+
+.onboarding-icone {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  background: var(--cor-primaria-clara);
+  color: var(--cor-primaria);
+  font-size: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 24px;
+}
+
+.onboarding-titulo {
+  font-family: var(--fonte-destaque);
+  font-size: 22px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.onboarding-texto {
+  font-size: 14px;
+  color: var(--cor-texto-suave);
+  line-height: 1.6;
+}
+
+/* Botão "Próximo"/"Começar" + bolinhas de progresso, fixos embaixo
+   da tela (fora do .onboarding-conteudo, pra não "pular" de lugar
+   quando o texto de um slide for maior que o outro) */
+.onboarding-rodape {
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  bottom: 40px;
+}
+
+.onboarding-dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--cor-borda);
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.dot-ativa {
+  background: var(--cor-primaria);
+  transform: scale(1.25);
+}
+
+/* ================================================
+   RESPONSIVO
+   Em celulares de verdade (tela pequena), o app já ocupa
+   100% da largura e altura por causa das regras lá em cima.
+   ================================================ */
+
+/* ================================================
+   TELA 2 - MOVIMENTAÇÕES
+   ================================================ */
+
+/* Abas de filtro (Todas / Receitas / Despesas) */
+.abas-filtro {
+  display: flex;
+  gap: 8px;
+  background: var(--cor-branco);
+  padding: 6px;
+  border-radius: 12px;
+  margin-bottom: 16px;
+  border: 1px solid var(--cor-borda);
+}
+
+.aba {
+  flex: 1;
+  border: none;
+  background: none;
+  padding: 8px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--cor-texto-suave);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.aba:active {
+  transform: scale(0.94);
+}
+
+/* Estilo da aba selecionada no momento */
+.aba-ativa {
+  background: var(--cor-primaria);
+  color: var(--cor-texto-inverso);
+  font-weight: 600;
+}
+
+/* Campo de busca por descrição (tela de Movimentações) */
+.barra-busca {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--cor-branco);
+  border: 1px solid var(--cor-borda);
+  border-radius: 12px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  color: var(--cor-texto-suave);
+}
+
+.barra-busca input {
+  flex: 1;
+  border: none;
+  background: none;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--cor-texto);
+}
+
+.barra-busca input:focus {
+  outline: none;
+}
+
+/* Seletor de mês (tela de Movimentações), mesmo visual da barra de busca */
+.filtro-mes {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--cor-branco);
+  border: 1px solid var(--cor-borda);
+  border-radius: 12px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  color: var(--cor-texto-suave);
+}
+
+.filtro-mes select {
+  flex: 1;
+  border: none;
+  background: none;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--cor-texto);
+  cursor: pointer;
+}
+
+.filtro-mes select:focus {
+  outline: none;
+}
+
+/* Botão azul grande de "+ Novo lançamento" */
+.botao-primario {
+  width: 100%;
+  background: var(--cor-primaria);
+  color: var(--cor-texto-inverso);
+  border: none;
+  border-radius: 12px;
+  padding: 14px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  margin-bottom: 20px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+
+.botao-primario:hover {
+  /* escurece o azul de verdade (em vez de só baixar a opacidade,
+     que quase não se percebe) */
+  filter: brightness(0.88);
+  box-shadow: 0 6px 14px rgba(122, 48, 66, 0.4);
+}
+
+.botao-primario:active {
+  transform: scale(0.97);
+}
+
+/* Título de cada grupo de data ("Hoje", "Ontem"...) */
+.titulo-grupo-data {
+  font-size: 13px;
+  color: var(--cor-texto-suave);
+  margin: 4px 0 10px;
+  font-weight: 600;
+}
+
+.lista-lancamentos {
+  list-style: none;
+  background: var(--cor-branco);
+  border-radius: var(--raio-card);
+  box-shadow: var(--sombra-card);
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+
+.lancamento {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--cor-borda);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.lancamento:hover {
+  /* var(--cor-fundo) é quase igual ao branco do card, por isso o
+     efeito antigo era quase invisível. var(--cor-borda) é um cinza
+     mais forte, dá pra ver de verdade. */
+  background-color: var(--cor-borda);
+}
+
+.lancamento:active {
+  background-color: var(--cor-primaria-clara);
+}
+
+.lancamento:last-child {
+  border-bottom: none;
+}
+
+.icone-lancamento {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.icone-receita {
+  background: var(--cor-positiva-fundo);
+  color: var(--cor-positiva);
+}
+
+.icone-despesa {
+  background: var(--cor-negativa-fundo);
+  color: var(--cor-negativa);
+}
+
+.info-lancamento {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  font-size: 14px;
+}
+
+.categoria-lancamento {
+  font-size: 12px;
+  color: var(--cor-texto-suave);
+}
+
+.seta-lancamento {
+  color: var(--cor-texto-suave);
+  font-size: 18px;
+}
+
+/*
+  Essa classe é usada pelo JavaScript pra ESCONDER um lançamento
+  quando ele não bate com o filtro escolhido (ex: filtro "Receitas"
+  escondendo os itens de despesa).
+*/
+.lancamento-escondido {
+  display: none;
+}
+
+/*
+  Estado vazio: aparece quando não há nenhum lançamento pra mostrar
+  (seja porque a pessoa excluiu todos, seja porque o filtro escolhido
+  não bateu com nada). Por padrão fica escondido (display: none) — o
+  JavaScript é quem decide quando mostrar.
+*/
+.estado-vazio {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--cor-texto-suave);
+}
+
+.estado-vazio.estado-vazio-visivel {
+  display: flex;
+}
+
+.estado-vazio i {
+  font-size: 40px;
+  margin-bottom: 14px;
+  opacity: 0.6;
+}
+
+.estado-vazio p {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--cor-texto);
+  margin-bottom: 4px;
+}
+
+.estado-vazio span {
+  font-size: 13px;
+}
+
+/* ================================================
+   TELA 3 - PLANEJAMENTO
+   ================================================ */
+
+/* Meta financeira (dentro do card "Metas financeiras") */
+.meta {
+  display: flex;
+  gap: 12px;
+}
+
+.icone-meta {
+  width: 44px;
+  height: 44px;
+  /* Dourado em vez do verde padrão — metas são "conquistas", têm uma
+     cor só delas, diferente do verde usado pra orçamento/saldo */
+  background: var(--cor-acento-fundo);
+  color: var(--cor-acento);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.info-meta {
+  flex: 1;
+}
+
+.linha-meta-topo {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  margin-bottom: 2px;
+}
+
+.porcentagem-meta {
+  color: var(--cor-acento);
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.meta-valor-total {
+  font-size: 12px;
+  color: var(--cor-texto-suave);
+  display: block;
+  margin-bottom: 8px;
+}
+
+.meta-valor-atual {
+  font-size: 12px;
+  color: var(--cor-texto-suave);
+  display: block;
+  margin-top: 6px;
+}
+
+/* Linhas do card "Orçamento do mês" */
+.linha-orcamento {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  margin-bottom: 10px;
+}
+
+.linha-orcamento:last-of-type {
+  margin-bottom: 0;
+}
+
+/* Variação verde da barra de progresso (orçamento "saudável") */
+.barra-progresso-verde {
+  background: var(--cor-positiva);
+}
+
+.barra-progresso-orcamento-mensal {
+  margin-top: 10px;
+}
+
+/* Card de dica: ícone + texto lado a lado */
+.card-dica {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.icone-dica {
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+.texto-dica {
+  font-size: 13px;
+  color: var(--cor-texto-suave);
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+/* Ícone girando, usado nos botões enquanto "carregam" (ver
+   comLoadingBotao no JS) — não depende do Font Awesome ter a
+   animação própria carregada, por garantia */
+@keyframes girar {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.icone-carregando {
+  display: inline-block;
+  animation: girar 0.6s linear infinite;
+}
+
+/* Checkbox "Repetir todo mês" no formulário de novo lançamento */
+.opcao-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--cor-texto);
+  cursor: pointer;
+}
+
+.opcao-checkbox input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--cor-primaria);
+}
+
+/* Selo pequeno indicando que um lançamento é recorrente */
+.icone-recorrente {
+  color: var(--cor-texto-suave);
+  font-size: 11px;
+  margin-left: 6px;
+}
+
+/* ================================================
+   LIMITES POR CATEGORIA (card "Planejamento")
+   ================================================ */
+.linha-orcamento-categoria {
+  margin-bottom: 18px;
+}
+
+.linha-orcamento-categoria:last-child {
+  margin-bottom: 0;
+}
+
+.linha-orcamento-categoria-topo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.nome-orcamento-categoria {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.valor-gasto-categoria {
+  font-size: 13px;
+}
+
+.linha-orcamento-categoria-rodape {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 6px;
+}
+
+.editar-limite {
+  font-size: 12px;
+  color: var(--cor-texto-suave);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.campo-limite-categoria {
+  width: 64px;
+  border: 1px solid var(--cor-borda);
+  border-radius: 6px;
+  padding: 3px 6px;
+  font-size: 12px;
+  font-family: inherit;
+  background: var(--cor-fundo);
+  color: var(--cor-texto);
+}
+
+/* Barra fica amarela quando perto do limite, e vermelha quando passa */
+.barra-progresso-preenchida.barra-progresso-alerta {
+  background: #D9A23B;
+}
+
+.barra-progresso-preenchida.barra-progresso-estourada {
+  background: var(--cor-negativa);
+}
+
+/* ================================================
+   LANÇAMENTOS RECORRENTES (card "Planejamento")
+   ================================================ */
+.botao-sem-borda {
+  border: none;
+  background: none;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.item-recorrente {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--cor-borda);
+  font-size: 13px;
+}
+
+.item-recorrente:last-child {
+  border-bottom: none;
+}
+
+.info-item-recorrente {
+  display: flex;
+  flex-direction: column;
+}
+
+.info-item-recorrente span {
+  font-size: 12px;
+  color: var(--cor-texto-suave);
+}
+
+.botao-excluir-recorrente {
+  border: none;
+  background: none;
+  color: var(--cor-texto-suave);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 6px;
+  transition: color 0.15s ease;
+}
+
+.botao-excluir-recorrente:hover {
+  color: var(--cor-negativa);
+}
+
+/* Lista de categorias customizáveis (card "Categorias", Planejamento) */
+.lista-categorias {
+  display: flex;
+  flex-direction: column;
+}
+
+.item-categoria {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--cor-borda);
+  background: none;
+  border-left: none;
+  border-right: none;
+  border-top: none;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--cor-texto);
+  cursor: pointer;
+  text-align: left;
+  transition: opacity 0.15s ease;
+}
+
+.item-categoria:active {
+  opacity: 0.7;
+}
+
+.item-categoria:last-child {
+  border-bottom: none;
+}
+
+.nome-item-categoria {
+  flex: 1;
+  font-weight: 500;
+}
+
+.estado-vazio-recorrentes {
+  display: none;
+  font-size: 12px;
+  color: var(--cor-texto-suave);
+  line-height: 1.4;
+  text-align: center;
+  padding: 8px 0;
+}
+
+.estado-vazio-recorrentes.estado-vazio-recorrentes-visivel {
+  display: block;
+}
+
+/* Grade com os 3 atalhos de relatório */
+.grid-relatorios {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.atalho-relatorio {
+  background: var(--cor-fundo);
+  border: 1px solid var(--cor-borda);
+  border-radius: 12px;
+  padding: 14px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-family: inherit;
+  color: var(--cor-texto);
+  cursor: pointer;
+}
+
+.icone-relatorio {
+  font-size: 20px;
+}
+
+/* ================================================
+   MODAL GENÉRICO
+   ================================================ */
+
+/* O "fundo" escuro que cobre a tela toda atrás do modal */
+.modal-fundo {
+  position: absolute;
+  inset: 0; /* atalho pra top:0; right:0; bottom:0; left:0; */
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: flex-end; /* modal sobe de baixo pra cima, estilo app */
+  justify-content: center;
+  /* precisa ficar ACIMA da .tela-auth (z-index 500), senão o modal
+     abre "por baixo" da tela de login/cadastro e fica invisível e
+     inclicável (foi o caso do modal de "esqueceu a senha") */
+  z-index: 600;
+}
+
+.modal-escondido {
+  display: none;
+}
+
+.modal-caixa {
+  background: var(--cor-branco);
+  width: 100%;
+  max-height: 80%;
+  border-radius: 20px 20px 0 0;
+  padding: 20px;
+  overflow-y: auto;
+  animation: subir-modal 0.2s ease;
+  scrollbar-width: none; /* esconde a barra de rolagem (Firefox) */
+}
+
+.modal-caixa::-webkit-scrollbar {
+  display: none; /* esconde a barra de rolagem (Chrome/Edge/Safari) */
+}
+
+@keyframes subir-modal {
+  from { transform: translateY(30px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.modal-cabecalho {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.modal-cabecalho h2 {
+  font-size: 17px;
+}
+
+/* Formulário de "Novo lançamento" dentro do modal */
+.campo-formulario {
+  margin-bottom: 14px;
+}
+
+.campo-formulario label {
+  display: block;
+  font-size: 13px;
+  color: var(--cor-texto-suave);
+  margin-bottom: 6px;
+}
+
+.campo-formulario input,
+.campo-formulario select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--cor-borda);
+  border-radius: 10px;
+  font-size: 14px;
+  font-family: inherit;
+  background: var(--cor-fundo);
+  color: var(--cor-texto); /* inputs/selects não herdam a cor do texto sozinhos, igual os botões */
+  transition: border-color 0.15s ease;
+}
+
+/* Campo com erro: borda vermelha + mensagem embaixo. A classe vai no
+   .campo-formulario (não direto no input), porque .campo-senha tem
+   um botão de "olho" no meio e o erro precisa aparecer abaixo de
+   tudo isso, não colado no input */
+.campo-formulario-com-erro input,
+.campo-formulario-com-erro select {
+  border-color: var(--cor-negativa);
+}
+
+.erro-campo {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--cor-negativa);
+}
+
+/*
+  Campo de senha com botão de "olho" pra mostrar/esconder o que foi
+  digitado. position: relative aqui + position: absolute no botão é
+  o mesmo truque do FAB: o botão flutua DENTRO do campo de texto.
+*/
+.campo-senha {
+  position: relative;
+}
+
+.campo-senha input {
+  /* espaço extra à direita, pra o texto digitado não ficar escondido
+     atrás do botão do olho */
+  padding-right: 42px;
+}
+
+.botao-olho-senha {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 34px;
+  height: 34px;
+  background: none;
+  border: none;
+  color: var(--cor-texto-suave);
+  cursor: pointer;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease;
+}
+
+.botao-olho-senha:hover {
+  color: var(--cor-texto);
+}
+
+.link-esqueceu-senha {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+  font-size: 12px;
+  text-align: right;
+  color: var(--cor-primaria);
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.link-esqueceu-senha:hover {
+  text-decoration: underline;
+}
+
+.texto-modal-aviso {
+  font-size: 13px;
+  color: var(--cor-texto-suave);
+  line-height: 1.4;
+  margin-bottom: 16px;
+}
+
+/* Botões "Receita" / "Despesa" pra escolher o tipo no formulário */
+.grupo-tipo {
+  display: flex;
+  gap: 8px;
+}
+
+.opcao-tipo {
+  flex: 1;
+  padding: 10px;
+  border: 1px solid var(--cor-borda);
+  border-radius: 10px;
+  text-align: center;
+  font-size: 13px;
+  cursor: pointer;
+  background: var(--cor-fundo);
+}
+
+.opcao-tipo input {
+  display: none; /* escondemos o "bolinha" padrão do rádio */
+}
+
+/* Quando o rádio escondido está marcado, destacamos o label pai */
+.opcao-tipo:has(input:checked) {
+  border-color: var(--cor-primaria);
+  background: var(--cor-primaria-clara);
+  color: var(--cor-primaria);
+  font-weight: 600;
+}
+
+/* Lista simples usada nos modais de "Ver todas" (categorias/metas) */
+.modal-lista-item {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--cor-borda);
+}
+
+.modal-lista-item:last-child {
+  border-bottom: none;
+}
+
+/* ================================================
+   TOAST (avisinho que aparece embaixo e some sozinho)
+   ================================================ */
+.toast {
+  position: absolute;
+  bottom: 90px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: #16181D;
+  color: var(--cor-texto-inverso);
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-size: 13px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  z-index: 700;
+  max-width: 85%;
+  text-align: center;
+}
+
+.toast-visivel {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* ================================================
+   BOTÃO DE TEMA (claro/escuro)
+   Agora mora dentro do cabeçalho da Tela 1 (junto do
+   sininho de notificação), por isso só aparece no Resumo.
+   Usa o mesmo estilo de .botao-icone, só precisa do
+   agrupamento abaixo pra ficar lado a lado com o sininho.
+   ================================================ */
+.acoes-cabecalho {
+  display: flex;
+  gap: 8px;
+}
+
+/* Agrupa o botão "+" com o link "Ver todas", em cards que têm os dois
+   (ex: Metas financeiras) */
+.acoes-card-titulo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Versão menor do botão-ícone padrão, pra caber ao lado de um link
+   de texto sem dominar o cabeçalho do card */
+.botao-icone-pequeno {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+/* A meta em destaque agora é clicável (abre edição), igual um
+   lançamento — por isso ganha o mesmo tipo de reação ao toque */
+.meta {
+  cursor: pointer;
+  border-radius: 12px;
+  padding: 6px;
+  margin: -6px;
+  transition: background-color 0.15s ease;
+}
+
+.meta:hover {
+  background-color: var(--cor-fundo);
+}
+
+.meta:active {
+  background-color: var(--cor-primaria-clara);
+}
+
+/* Estado vazio compacto, usado dentro do card de Metas quando a
+   pessoa ainda não criou nenhuma */
+.estado-vazio-meta {
+  text-align: center;
+  padding: 20px 10px;
+  color: var(--cor-texto-suave);
+}
+
+.estado-vazio-meta p {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--cor-texto);
+  margin-bottom: 4px;
+}
+
+.estado-vazio-meta span {
+  font-size: 13px;
+}

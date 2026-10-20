@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Fundo: quadrado azul arredondado, cor igual à --cor-primaria do app -->
+  <rect width="512" height="512" rx="110" fill="#2F6FED"/>
+
+  <!-- Ícone de carteira, desenhado só com formas simples (retângulo + círculo) -->
+  <rect x="96" y="160" width="320" height="220" rx="28" fill="#FFFFFF"/>
+  <rect x="96" y="160" width="320" height="70" rx="28" fill="#E8EFFD"/>
+  <circle cx="356" cy="270" r="26" fill="#2F6FED"/>
+</svg>

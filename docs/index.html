@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <!-- Isso aqui garante que o site fique bem em celulares (responsivo) -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meu Bolso - App Financeiro</title>
+
+  <!-- Favicon (ícone que aparece na aba do navegador) -->
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+
+  <!-- PWA: diz ao navegador como o app pode ser "instalado" -->
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/icon.svg">
+  <meta name="theme-color" content="#7A3042">
+
+  <!-- Ligando nosso arquivo de estilos -->
+  <link rel="stylesheet" href="css/style.css">
+
+  <!-- Fonte do Google Fonts (deixa o texto mais bonito que a fonte padrão) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <!--
+    Duas fontes, dois papéis: Inter pra interface (textos, botões,
+    rótulos — precisa ser neutra e legível), e Fraunces pros números
+    grandes e títulos (uma serifada com mais personalidade, usada só
+    nos destaques pra não ficar pesada no app inteiro).
+  -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap" rel="stylesheet">
+
+  <!-- Biblioteca de ícones (Font Awesome). Usamos as classes tipo "fa-house"
+       no lugar de emojis — ficam nítidos em qualquer tamanho de tela e
+       respeitam a cor do tema (claro/escuro) automaticamente. -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+</head>
+<body>
+
+  <!--
+    Toda a nossa "tela de celular" fica dentro dessa div .app-container.
+    É só um truque visual: centralizamos ela e damos uma largura máxima
+    (tipo 420px), pra simular a tela de um celular no navegador.
+  -->
+  <div class="app-container">
+
+    <!--
+      ================================================
+      TELA DE LOGIN / CADASTRO
+      ================================================
+      Fica por cima de tudo (position: absolute, inset: 0) até a
+      pessoa entrar ou criar conta. Depois disso, o JavaScript
+      esconde essa tela e revela o app normal por baixo.
+
+      O cadastro e o login consultam o backend; os dados financeiros
+      são carregados usando o ID da conta autenticada.
+    -->
+    <section id="tela-login" class="tela-auth">
+      <div class="auth-conteudo">
+        <div class="auth-logo"><i class="fa-solid fa-wallet"></i></div>
+        <h1 class="auth-titulo">Meu Bolso</h1>
+        <p class="auth-subtitulo">Controle financeiro simples e direto</p>
+
+        <!--
+          Seletor de esquema de cor. Cada botão troca a "identidade"
+          visual do app inteiro (data-esquema na tag <html>) — o
+          círculo colorido dentro de cada botão é só uma prévia
+          (não usa variável, porque é a cor de um esquema que talvez
+          nem esteja ativo no momento).
+        -->
+        <div class="seletor-esquema" role="group" aria-label="Escolha um tema de cor">
+          <button type="button" class="opcao-esquema" data-esquema="vinho" aria-label="Tema vinho">
+            <span class="amostra-esquema amostra-vinho"></span>
+          </button>
+          <button type="button" class="opcao-esquema" data-esquema="azul" aria-label="Tema azul">
+            <span class="amostra-esquema amostra-azul"></span>
+          </button>
+        </div>
+
+        <div class="auth-abas">
+          <button class="auth-aba auth-aba-ativa" data-formulario="form-login" type="button">Entrar</button>
+          <button class="auth-aba" data-formulario="form-cadastro" type="button">Criar conta</button>
+        </div>
+
+        <!-- Formulário de login -->
+        <form id="form-login" class="auth-form" novalidate>
+          <div class="campo-formulario">
+            <label for="login-email">E-mail</label>
+            <input type="email" id="login-email" placeholder="voce@email.com" required>
+          </div>
+          <div class="campo-formulario">
+            <label for="login-senha">Senha</label>
+            <!--
+              .campo-senha é só um "envelope" com position: relative,
+              pra poder colocar o botão do olho flutuando DENTRO do
+              campo de texto (position: absolute), em vez de do lado.
+            -->
+            <div class="campo-senha">
+              <input type="password" id="login-senha" placeholder="Mínimo 8 caracteres" minlength="8" required>
+              <button type="button" class="botao-olho-senha" data-campo-senha="login-senha" aria-label="Mostrar ou esconder senha">
+                <i class="fa-regular fa-eye"></i>
+              </button>
+            </div>
+            <button type="button" class="link-esqueceu-senha" id="botao-esqueceu-senha">Esqueceu a senha?</button>
+          </div>
+          <button type="submit" class="botao-primario">Entrar</button>
+        </form>
+
+        <!-- Formulário de cadastro (começa escondido) -->
+        <form id="form-cadastro" class="auth-form auth-form-escondido" novalidate>
+          <div class="campo-formulario">
+            <label for="cadastro-nome">Nome</label>
+            <input type="text" id="cadastro-nome" placeholder="Seu nome" required>
+          </div>
+          <div class="campo-formulario">
+            <label for="cadastro-email">E-mail</label>
+            <input type="email" id="cadastro-email" placeholder="voce@email.com" required>
+          </div>
+          <div class="campo-formulario">
+            <label for="cadastro-senha">Senha</label>
+            <div class="campo-senha">
+              <input type="password" id="cadastro-senha" placeholder="Mínimo 8 caracteres" minlength="8" required>
+              <button type="button" class="botao-olho-senha" data-campo-senha="cadastro-senha" aria-label="Mostrar ou esconder senha">
+                <i class="fa-regular fa-eye"></i>
+              </button>
+            </div>
+          </div>
+          <div class="campo-formulario">
+            <label for="cadastro-confirmar-senha">Confirmar senha</label>
+            <div class="campo-senha">
+              <input type="password" id="cadastro-confirmar-senha" placeholder="Digite a senha de novo" required>
+              <button type="button" class="botao-olho-senha" data-campo-senha="cadastro-confirmar-senha" aria-label="Mostrar ou esconder senha">
+                <i class="fa-regular fa-eye"></i>
+              </button>
+            </div>
+          </div>
+          <button type="submit" class="botao-primario">Criar conta</button>
+        </form>
+
+        <p class="auth-aviso">Seu cadastro e login são validados no servidor.</p>
+      </div>
+    </section>
+
+    <!--
+      ================================================
+      ONBOARDING DE BOAS-VINDAS
+      ================================================
+      Aparece só uma vez, logo depois que a pessoa CRIA a conta
+      (não no login normal) — 3 telinhas rápidas explicando as partes
+      principais do app, antes de cair no Resumo de verdade.
+    -->
+    <section id="tela-onboarding" class="tela-auth tela-auth-escondida">
+      <button type="button" class="link-pular-onboarding" id="botao-pular-onboarding">Pular</button>
+
+      <div class="onboarding-conteudo">
+        <div class="onboarding-slide onboarding-slide-ativa" data-slide="0">
+          <span class="onboarding-icone"><i class="fa-solid fa-list-check"></i></span>
+          <h2 class="onboarding-titulo">Organize seus lançamentos</h2>
+          <p class="onboarding-texto">Registre receitas e despesas em segundos, já separadas por categoria e cor pra identificar tudo de relance.</p>
+        </div>
+
+        <div class="onboarding-slide" data-slide="1">
+          <span class="onboarding-icone"><i class="fa-solid fa-bullseye"></i></span>
+          <h2 class="onboarding-titulo">Controle seu orçamento</h2>
+          <p class="onboarding-texto">Defina limites por categoria e crie metas financeiras — o app avisa quando você estiver perto de estourar.</p>
+        </div>
+
+        <div class="onboarding-slide" data-slide="2">
+          <span class="onboarding-icone"><i class="fa-solid fa-palette"></i></span>
+          <h2 class="onboarding-titulo">Do seu jeito</h2>
+          <p class="onboarding-texto">Escolha entre os temas vinho ou azul, no modo claro ou escuro, e deixe o app com a sua cara.</p>
+        </div>
+      </div>
+
+      <div class="onboarding-rodape">
+        <div class="onboarding-dots" id="onboarding-dots">
+          <span class="dot dot-ativa"></span>
+          <span class="dot"></span>
+          <span class="dot"></span>
+        </div>
+        <button type="button" class="botao-primario" id="botao-avancar-onboarding">Próximo</button>
+      </div>
+    </section>
+
+    <!-- ============================================= -->
+    <!-- TELA 1 - RESUMO                                -->
+    <!-- ============================================= -->
+    <!--
+      Cada tela é uma <section> com uma classe "tela".
+      A classe "tela-ativa" é o que decide qual tela aparece.
+      O JavaScript (js/script.js) vai trocar essa classe quando
+      você clicar nos ícones do menu de baixo.
+    -->
+    <section id="tela-resumo" class="tela tela-ativa">
+
+      <!--
+        Skeleton loading: barrinhas que piscam por uns instantes
+        quando você troca de tela, simulando "carregando dados".
+        O JavaScript controla quando isso aparece (classe
+        .tela-carregando lá no <section>).
+      -->
+      <div class="skeleton-overlay">
+        <div class="skeleton-bloco" style="height: 60px;"></div>
+        <div class="skeleton-bloco" style="height: 120px;"></div>
+        <div class="skeleton-bloco" style="height: 70px;"></div>
+        <div class="skeleton-bloco" style="height: 150px;"></div>
+        <div class="skeleton-bloco" style="height: 180px;"></div>
+      </div>
+
+      <!-- Cabeçalho da tela -->
+      <header class="cabecalho">
+        <div>
+          <p class="saudacao" id="texto-saudacao">Olá!</p>
+          <h1 class="titulo-tela">Resumo financeiro</h1>
+        </div>
+        <div class="acoes-cabecalho">
+          <button class="botao-icone" id="botao-tema" aria-label="Alternar tema claro/escuro"><i class="fa-solid fa-moon" id="icone-tema"></i></button>
+          <button class="botao-icone" aria-label="Notificações"><i class="fa-regular fa-bell"></i></button>
+        </div>
+      </header>
+
+      <!-- Card do saldo atual -->
+      <div class="card card-saldo">
+        <div class="card-saldo-topo">
+          <span class="rotulo">Saldo atual</span>
+          <button class="botao-icone botao-olho" id="botao-olho" aria-label="Mostrar ou esconder saldo"><i class="fa-regular fa-eye" id="icone-olho"></i></button>
+        </div>
+        <p class="valor-saldo valor-sensivel" id="valor-saldo"><!-- Exemplo anterior: R$ 4.320,00 -->R$ 0,00</p>
+        <span class="data-saldo">Hoje, 02 de Setembro</span>
+      </div>
+
+      <!-- Dois cards lado a lado: Receitas e Despesas -->
+      <div class="grid-duas-colunas">
+        <div class="card card-mini">
+          <span class="rotulo">Receitas</span>
+          <div class="linha-valor">
+            <strong class="valor-positivo valor-sensivel" id="mini-total-receitas"><!-- Exemplo anterior: R$ 6.250,00 -->R$ 0,00</strong>
+            <span class="selo selo-positivo">↑</span>
+          </div>
+        </div>
+        <div class="card card-mini">
+          <span class="rotulo">Despesas</span>
+          <div class="linha-valor">
+            <strong class="valor-negativo valor-sensivel" id="mini-total-despesas"><!-- Exemplo anterior: R$ 1.930,00 -->R$ 0,00</strong>
+            <span class="selo selo-negativo">↓</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card "Resumo do mês" com o gráfico donut -->
+      <div class="card">
+        <div class="card-cabecalho">
+          <h2 class="card-titulo">Resumo do mês</h2>
+          <select class="seletor-mes" id="seletor-mes-resumo">
+            <option>Setembro</option>
+            <option>Agosto</option>
+            <option>Julho</option>
+          </select>
+        </div>
+
+        <div class="resumo-mes-conteudo">
+          <div class="resumo-mes-textos">
+            <p><span class="ponto ponto-receita"></span> Receitas <strong class="valor-positivo valor-sensivel" id="resumo-total-receitas"><!-- Exemplo anterior: R$ 6.250,00 -->R$ 0,00</strong></p>
+            <p><span class="ponto ponto-despesa"></span> Despesas <strong class="valor-negativo valor-sensivel" id="resumo-total-despesas"><!-- Exemplo anterior: R$ 1.930,00 -->R$ 0,00</strong></p>
+            <p class="saldo-mes">Saldo<br><strong class="valor-sensivel" id="resumo-saldo"><!-- Exemplo anterior: R$ 4.320,00 -->R$ 0,00</strong></p>
+          </div>
+
+          <!--
+            O "donut" (gráfico de rosca) é feito só com CSS,
+            usando um truque chamado "conic-gradient".
+            O número 69% está fixo por enquanto (dado mockado).
+          -->
+          <div class="donut" id="donut-grafico" style="--percentual: 0;">
+            <span class="donut-texto valor-sensivel" id="donut-texto">0%</span>
+          </div>
+        </div>
+        <p class="legenda-donut">Economia</p>
+      </div>
+
+      <!-- Card de evolução do saldo (gráfico de linha) -->
+      <div class="card">
+        <div class="card-cabecalho">
+          <h2 class="card-titulo">Evolução do saldo</h2>
+          <span class="rotulo">Últimos 7 dias</span>
+        </div>
+        <canvas id="grafico-evolucao-saldo" height="160"></canvas>
+      </div>
+
+      <!-- Card de categorias de gastos -->
+      <div class="card">
+        <div class="card-cabecalho">
+          <h2 class="card-titulo">Categorias (gastos)</h2>
+          <a href="#" class="link-ver-todas" id="link-ver-todas-categorias">Ver todas</a>
+        </div>
+
+        <ul class="lista-categorias">
+          <!-- Categorias de gastos fictícias antigas, mantidas como referência:
+          <li class="item-categoria">
+            <span class="icone-categoria" data-cor="moradia"><i class="fa-solid fa-house"></i></span>
+            <div class="info-categoria">
+              <div class="linha-categoria-topo">
+                <span>Moradia</span>
+                <span class="valor-sensivel">R$ 650,00</span>
+              </div>
+              <div class="barra-progresso">
+                <div class="barra-progresso-preenchida" data-cor="moradia" style="width: 33%;"></div>
+              </div>
+            </div>
+            <span class="porcentagem-categoria valor-sensivel">33%</span>
+          </li>
+
+          <li class="item-categoria">
+            <span class="icone-categoria" data-cor="alimentacao"><i class="fa-solid fa-cart-shopping"></i></span>
+            <div class="info-categoria">
+              <div class="linha-categoria-topo">
+                <span>Alimentação</span>
+                <span class="valor-sensivel">R$ 420,00</span>
+              </div>
+              <div class="barra-progresso">
+                <div class="barra-progresso-preenchida" data-cor="alimentacao" style="width: 22%;"></div>
+              </div>
+            </div>
+            <span class="porcentagem-categoria valor-sensivel">22%</span>
+          </li>
+
+          <li class="item-categoria">
+            <span class="icone-categoria" data-cor="transporte"><i class="fa-solid fa-car"></i></span>
+            <div class="info-categoria">
+              <div class="linha-categoria-topo">
+                <span>Transporte</span>
+                <span class="valor-sensivel">R$ 280,00</span>
+              </div>
+              <div class="barra-progresso">
+                <div class="barra-progresso-preenchida" data-cor="transporte" style="width: 14%;"></div>
+              </div>
+            </div>
+            <span class="porcentagem-categoria valor-sensivel">14%</span>
+          </li>
+
+          <li class="item-categoria">
+            <span class="icone-categoria" data-cor="outros"><i class="fa-solid fa-ellipsis"></i></span>
+            <div class="info-categoria">
+              <div class="linha-categoria-topo">
+                <span>Outros</span>
+                <span class="valor-sensivel">R$ 580,00</span>
+              </div>
+              <div class="barra-progresso">
+                <div class="barra-progresso-preenchida" data-cor="outros" style="width: 31%;"></div>
+              </div>
+            </div>
+            <span class="porcentagem-categoria valor-sensivel">31%</span>
+          </li>
+          -->
+        </ul>
+      </div>
+
+    </section>
+
+    <!-- ============================================= -->
+    <!-- TELA 2 - MOVIMENTAÇÕES (vamos construir depois) -->
+    <!-- ============================================= -->
+    <section id="tela-movimentacoes" class="tela">
+
+      <div class="skeleton-overlay">
+        <div class="skeleton-bloco" style="height: 50px;"></div>
+        <div class="skeleton-bloco" style="height: 50px;"></div>
+        <div class="skeleton-bloco" style="height: 220px;"></div>
+        <div class="skeleton-bloco" style="height: 150px;"></div>
+      </div>
+
+      <header class="cabecalho">
+        <h1 class="titulo-tela">Movimentações</h1>
+        <button class="botao-icone" aria-label="Filtrar"><i class="fa-solid fa-filter"></i></button>
+      </header>
+
+      <!--
+        Abas de filtro (Todas / Receitas / Despesas).
+        Cada botão tem um "data-filtro" que o JS vai usar pra saber
+        o que mostrar ou esconder. O valor "todas" mostra tudo.
+      -->
+      <!-- Campo de busca por descrição, funciona junto com as abas de filtro -->
+      <div class="barra-busca">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input type="search" id="campo-busca-lancamentos" placeholder="Buscar por descrição...">
+      </div>
+
+      <!-- Filtro por mês, montado pelo JS com os meses que realmente
+           existem nos lançamentos (ver atualizarOpcoesFiltroMes) -->
+      <div class="filtro-mes">
+        <i class="fa-solid fa-calendar-days"></i>
+        <select id="campo-filtro-mes">
+          <option value="todos">Todos os meses</option>
+        </select>
+      </div>
+
+      <div class="abas-filtro">
+        <button class="aba aba-ativa" data-filtro="todas">Todas</button>
+        <button class="aba" data-filtro="receita">Receitas</button>
+        <button class="aba" data-filtro="despesa">Despesas</button>
+      </div>
+
+      <button class="botao-primario" id="botao-novo-lancamento">+ Novo lançamento</button>
+
+      <!--
+        Tudo que é lista de lançamento de verdade fica dentro desse
+        container. Assim, quando não sobrar nenhum lançamento (seja
+        porque excluiu tudo, seja porque o filtro não bateu com
+        nada), o JS esconde esse container inteiro de uma vez e
+        mostra a mensagem de "estado vazio" no lugar.
+      -->
+      <div id="container-lancamentos">
+
+      <ul class="lista-lancamentos" id="lista-hoje">
+        <!-- Lançamentos fictícios antigos, mantidos como referência:
+        <li class="lancamento" data-tipo="receita">
+          <span class="icone-lancamento icone-receita"><i class="fa-solid fa-sack-dollar"></i></span>
+          <div class="info-lancamento">
+            <strong>Salário</strong>
+            <span class="categoria-lancamento">Receita</span>
+          </div>
+          <strong class="valor-positivo valor-sensivel">R$ 4.500,00</strong>
+          <span class="seta-lancamento">›</span>
+        </li>
+
+        <li class="lancamento" data-tipo="despesa" data-data="2025-09-02">
+          <span class="icone-lancamento icone-despesa"><i class="fa-solid fa-cart-shopping"></i></span>
+          <div class="info-lancamento">
+            <strong>Supermercado</strong>
+            <span class="categoria-lancamento">Alimentação</span>
+          </div>
+          <strong class="valor-negativo valor-sensivel">- R$ 150,00</strong>
+          <span class="seta-lancamento">›</span>
+        </li>
+
+        <li class="lancamento" data-tipo="despesa" data-data="2025-09-02">
+          <span class="icone-lancamento icone-despesa"><i class="fa-solid fa-gas-pump"></i></span>
+          <div class="info-lancamento">
+            <strong>Combustível</strong>
+            <span class="categoria-lancamento">Transporte</span>
+          </div>
+          <strong class="valor-negativo valor-sensivel">- R$ 80,00</strong>
+          <span class="seta-lancamento">›</span>
+        </li>
+
+        <li class="lancamento" data-tipo="receita" data-data="2025-09-02">
+          <span class="icone-lancamento icone-receita"><i class="fa-solid fa-gift"></i></span>
+          <div class="info-lancamento">
+            <strong>Bônus</strong>
+            <span class="categoria-lancamento">Receita</span>
+          </div>
+          <strong class="valor-positivo valor-sensivel">R$ 1.750,00</strong>
+          <span class="seta-lancamento">›</span>
+        </li>
+        -->
+      </ul>
+
+      <ul class="lista-lancamentos" id="lista-ontem">
+        <!-- Lançamentos fictícios antigos, mantidos como referência:
+        <li class="lancamento" data-tipo="despesa">
+          <span class="icone-lancamento icone-despesa"><i class="fa-solid fa-utensils"></i></span>
+          <div class="info-lancamento">
+            <strong>Restaurante</strong>
+            <span class="categoria-lancamento">Alimentação</span>
+          </div>
+          <strong class="valor-negativo valor-sensivel">- R$ 60,00</strong>
+          <span class="seta-lancamento">›</span>
+        </li>
+
+        <li class="lancamento" data-tipo="despesa" data-data="2025-09-01">
+          <span class="icone-lancamento icone-despesa"><i class="fa-solid fa-house"></i></span>
+          <div class="info-lancamento">
+            <strong>Aluguel</strong>
+            <span class="categoria-lancamento">Moradia</span>
+          </div>
+          <strong class="valor-negativo valor-sensivel">- R$ 650,00</strong>
+          <span class="seta-lancamento">›</span>
+        </li>
+
+        <li class="lancamento" data-tipo="despesa" data-data="2025-09-01">
+          <span class="icone-lancamento icone-despesa"><i class="fa-solid fa-car-side"></i></span>
+          <div class="info-lancamento">
+            <strong>Transporte por app</strong>
+            <span class="categoria-lancamento">Transporte</span>
+          </div>
+          <strong class="valor-negativo valor-sensivel">- R$ 30,00</strong>
+          <span class="seta-lancamento">›</span>
+        </li>
+        -->
+      </ul>
+
+      </div>
+      <!-- fim do #container-lancamentos -->
+
+      <!-- Mensagem que aparece quando não há nenhum lançamento pra mostrar -->
+      <div class="estado-vazio" id="estado-vazio-lancamentos">
+        <i class="fa-solid fa-receipt"></i>
+        <p>Nenhum lançamento encontrado</p>
+        <span>Tente outro filtro ou toque em "+ Novo lançamento".</span>
+      </div>
+
+    </section>
+
+    <!-- ============================================= -->
+    <!-- TELA 3 - PLANEJAMENTO (vamos construir depois)  -->
+    <!-- ============================================= -->
+    <section id="tela-planejamento" class="tela">
+
+      <div class="skeleton-overlay">
+        <div class="skeleton-bloco" style="height: 50px;"></div>
+        <div class="skeleton-bloco" style="height: 140px;"></div>
+        <div class="skeleton-bloco" style="height: 120px;"></div>
+        <div class="skeleton-bloco" style="height: 90px;"></div>
+        <div class="skeleton-bloco" style="height: 110px;"></div>
+      </div>
+
+      <header class="cabecalho">
+        <h1 class="titulo-tela">Planejamento</h1>
+        <button class="botao-icone" aria-label="Configurações"><i class="fa-solid fa-gear"></i></button>
+      </header>
+
+      <!-- Card de Metas financeiras -->
+      <div class="card">
+        <div class="card-cabecalho">
+          <h2 class="card-titulo">Metas financeiras</h2>
+          <div class="acoes-card-titulo">
+            <button type="button" class="botao-icone botao-icone-pequeno" id="botao-nova-meta" aria-label="Nova meta"><i class="fa-solid fa-plus"></i></button>
+            <a href="#" class="link-ver-todas" id="link-ver-todas-metas">Ver todas</a>
+          </div>
+        </div>
+
+        <!--
+          O conteúdo aqui dentro é todo gerado via JavaScript agora
+          (função renderizarMetaPrincipal), porque as metas deixaram
+          de ser fixas no HTML — a pessoa pode criar, editar e
+          excluir quantas quiser, tudo salvo no localStorage.
+        -->
+        <div id="container-meta-principal"></div>
+      </div>
+
+      <!-- Card de Orçamento do mês -->
+      <div class="card">
+        <div class="card-cabecalho">
+          <h2 class="card-titulo">Orçamento do mês</h2>
+          <select class="seletor-mes">
+            <option>Setembro</option>
+            <option>Agosto</option>
+            <option>Julho</option>
+          </select>
+        </div>
+
+        <!--
+          Assim como o card "Limites por categoria", esses valores
+          agora são calculados de verdade (função
+          renderizarOrcamentoMensal no JS) — "Gasto previsto" é o
+          único editável (um limite geral pro mês todo), os outros
+          dois são sempre recalculados a partir dos lançamentos reais.
+        -->
+        <div class="linha-orcamento">
+          <span class="rotulo">Gasto previsto</span>
+          <label class="editar-limite">
+            R$ <input type="number" min="0" step="50" id="campo-orcamento-mensal" class="campo-limite-categoria">
+          </label>
+        </div>
+        <div class="linha-orcamento">
+          <span class="rotulo">Gasto realizado</span>
+          <strong class="valor-sensivel" id="orcamento-mensal-realizado">R$ 0,00</strong>
+        </div>
+        <div class="linha-orcamento">
+          <span class="rotulo">Restante</span>
+          <strong class="valor-sensivel" id="orcamento-mensal-restante">R$ 0,00</strong>
+        </div>
+
+        <div class="barra-progresso barra-progresso-orcamento-mensal">
+          <div class="barra-progresso-preenchida barra-progresso-verde" id="orcamento-mensal-barra" style="width: 0%;"></div>
+        </div>
+      </div>
+
+      <!-- Card de Categorias (customizáveis: nome + ícone, cada uma com
+           uma cor da paleta do app). As categorias daqui alimentam os
+           formulários de lançamento e o card de "Limites por categoria"
+           logo abaixo. -->
+      <div class="card">
+        <div class="card-cabecalho">
+          <h2 class="card-titulo">Categorias</h2>
+          <div class="acoes-card-titulo">
+            <button type="button" class="botao-icone botao-icone-pequeno" id="botao-nova-categoria" aria-label="Nova categoria"><i class="fa-solid fa-plus"></i></button>
+          </div>
+        </div>
+        <div id="lista-categorias" class="lista-categorias"></div>
+      </div>
+
+      <!-- Card de Limites por categoria (orçamento mensal) -->
+      <div class="card">
+        <div class="card-cabecalho">
+          <h2 class="card-titulo">Limites por categoria</h2>
+        </div>
+        <div id="lista-orcamento-categorias"></div>
+      </div>
+
+      <!-- Card de Lançamentos recorrentes -->
+      <div class="card">
+        <div class="card-cabecalho">
+          <h2 class="card-titulo">Lançamentos recorrentes</h2>
+          <button type="button" class="link-ver-todas botao-sem-borda" id="botao-simular-mes">Simular próximo mês ⏭</button>
+        </div>
+        <div id="lista-recorrentes"></div>
+        <p class="estado-vazio-recorrentes" id="estado-vazio-recorrentes">
+          Nenhum lançamento recorrente ainda. Marque "Repetir todo mês" ao criar um lançamento.
+        </p>
+      </div>
+
+      <!-- Card de Dica -->
+      <div class="card card-dica">
+        <span class="icone-dica"><i class="fa-solid fa-lightbulb"></i></span>
+        <div>
+          <h2 class="card-titulo">Dicas para você</h2>
+          <p class="texto-dica">Continue assim! Você está no caminho certo para alcançar suas metas.</p>
+        </div>
+      </div>
+
+      <!-- Card de Relatórios -->
+      <div class="card">
+        <div class="card-cabecalho">
+          <h2 class="card-titulo">Relatórios</h2>
+          <a href="#" class="link-ver-todas">Ver todos</a>
+        </div>
+
+        <div class="grid-relatorios">
+          <button class="atalho-relatorio" data-relatorio="Mensal">
+            <span class="icone-relatorio"><i class="fa-solid fa-calendar-days"></i></span>
+            <span>Mensal</span>
+          </button>
+          <button class="atalho-relatorio" data-relatorio="Categorias">
+            <span class="icone-relatorio"><i class="fa-solid fa-chart-pie"></i></span>
+            <span>Categorias</span>
+          </button>
+          <button class="atalho-relatorio" data-relatorio="Comparativos">
+            <span class="icone-relatorio"><i class="fa-solid fa-chart-column"></i></span>
+            <span>Comparativos</span>
+          </button>
+          <button class="atalho-relatorio" data-relatorio="Exportar">
+            <span class="icone-relatorio"><i class="fa-solid fa-file-arrow-down"></i></span>
+            <span>Exportar CSV</span>
+          </button>
+        </div>
+      </div>
+
+      <!--
+        Card de Conta: mostra quem está logado e tem o botão de SAIR
+        bem visível (antes ele estava escondido atrás da engrenagem
+        lá em cima, o que confundia). Representa a tabela USUARIO
+        do DER — por enquanto só lê do localStorage, mas no dia que
+        existir back-end, é aqui que mostraria os dados reais.
+      -->
+      <div class="card">
+        <div class="card-cabecalho">
+          <h2 class="card-titulo">Conta</h2>
+        </div>
+        <!--
+          Avatar com a inicial do nome (estilo Gmail/Google), em vez
+          de só um texto puro — dá mais cara de "produto de verdade".
+          O JS troca a letra e o nome/e-mail toda vez que loga.
+        -->
+        <div class="perfil-conta">
+          <span class="avatar-usuario" id="avatar-usuario">?</span>
+          <div class="info-perfil-conta">
+            <strong id="texto-usuario-logado" class="valor-sensivel">—</strong>
+            <span class="rotulo">Conta conectada</span>
+          </div>
+          <button type="button" class="botao-icone botao-icone-pequeno" id="botao-editar-perfil" aria-label="Editar perfil">
+            <i class="fa-solid fa-pen"></i>
+          </button>
+        </div>
+
+        <p class="rotulo" style="margin-bottom: 8px;">Tema de cor</p>
+        <div class="seletor-esquema" role="group" aria-label="Escolha um tema de cor" style="margin-bottom: 18px;">
+          <button type="button" class="opcao-esquema" data-esquema="vinho" aria-label="Tema vinho">
+            <span class="amostra-esquema amostra-vinho"></span>
+          </button>
+          <button type="button" class="opcao-esquema" data-esquema="azul" aria-label="Tema azul">
+            <span class="amostra-esquema amostra-azul"></span>
+          </button>
+        </div>
+
+        <button class="botao-perigo botao-sair-trigger">Sair da conta</button>
+      </div>
+
+    </section>
+
+    <!-- ============================================= -->
+    <!-- BARRA DE NAVEGAÇÃO INFERIOR                    -->
+    <!-- ============================================= -->
+    <!--
+      O atributo "data-tela" diz pro JavaScript qual tela abrir
+      quando o botão for clicado. Repara que o valor é igual ao
+      "id" das <section> lá em cima (ex: "tela-resumo").
+    -->
+    <nav class="menu-inferior">
+      <button class="item-menu item-menu-ativo" data-tela="tela-resumo">
+        <span class="icone-menu"><i class="fa-solid fa-house"></i></span>
+        <span>Resumo</span>
+      </button>
+      <button class="item-menu" data-tela="tela-movimentacoes">
+        <span class="icone-menu"><i class="fa-solid fa-list"></i></span>
+        <span>Movimentações</span>
+      </button>
+      <button class="item-menu" data-tela="tela-planejamento">
+        <span class="icone-menu"><i class="fa-solid fa-bullseye"></i></span>
+        <span>Planejamento</span>
+      </button>
+    </nav>
+
+    <!--
+      Botão flutuante (FAB) de novo lançamento. Fica por cima de tudo,
+      sempre visível, pra pessoa não precisar rolar a tela até achar
+      o botão "+ Novo lançamento". O JS esconde ele na tela de
+      Planejamento (lá não tem lançamento pra adicionar).
+    -->
+    <button class="botao-fab" id="botao-fab-novo-lancamento" aria-label="Novo lançamento">
+      <i class="fa-solid fa-plus"></i>
+    </button>
+
+    <!--
+      ================================================
+      MODAL GENÉRICO
+      ================================================
+      Isso aqui é uma "janela flutuante" que reaproveitamos pra
+      várias coisas: formulário de novo lançamento, lista de
+      categorias, lista de metas e preview de relatório.
+
+      Por padrão ela fica escondida (classe "modal-escondido").
+      O JavaScript troca o "modal-titulo" e o "modal-corpo" com
+      o conteúdo certo, e mostra/esconde com essa classe.
+    -->
+    <div class="modal-fundo modal-escondido" id="modal-fundo">
+      <div class="modal-caixa">
+        <div class="modal-cabecalho">
+          <h2 id="modal-titulo">Título</h2>
+          <button class="botao-icone" id="botao-fechar-modal" aria-label="Fechar"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="modal-corpo" id="modal-corpo">
+          <!-- Conteúdo é inserido aqui via JavaScript -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Avisinho que aparece embaixo e some sozinho -->
+    <div class="toast" id="toast"></div>
+
+  </div>
+
+  <!-- Biblioteca de gráficos usada pelos relatórios -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+
+  <!-- Ligando nosso arquivo de JavaScript (sempre no final do body) -->
+  <script src="js/script.js"></script>
+</body>
+</html>
