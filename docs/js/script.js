@@ -2435,13 +2435,10 @@ document.getElementById('form-login').addEventListener('submit', async (evento) 
   }
 });
 
-// --- "Esqueceu a senha?" ---
-// Ainda não tem back-end de verdade, então esse fluxo é só visual: abre
-// um modal pedindo o e-mail e finge que mandou um link de redefinição.
-// Fica fácil trocar pela chamada real quando o back-end existir.
+// --- Recuperação e redefinição de senha ---
 function htmlFormularioEsqueciSenha() {
   return `
-    <p class="texto-modal-aviso">Informe seu e-mail e simulamos o envio de um link de redefinição de senha.</p>
+    <p class="texto-modal-aviso">Informe seu e-mail cadastrado. Se a conta existir, enviaremos um link para redefinir a senha.</p>
     <form id="form-esqueceu-senha" novalidate>
       <div class="campo-formulario">
         <label for="recuperar-email">E-mail</label>
@@ -2452,13 +2449,82 @@ function htmlFormularioEsqueciSenha() {
   `;
 }
 
+function htmlFormularioRedefinirSenha() {
+  return `
+    <p class="texto-modal-aviso">Crie uma nova senha com pelo menos 8 caracteres.</p>
+    <form id="form-redefinir-senha" novalidate>
+      <div class="campo-formulario">
+        <label for="nova-senha">Nova senha</label>
+        <input type="password" id="nova-senha" minlength="8" maxlength="128" required>
+      </div>
+      <div class="campo-formulario">
+        <label for="confirmar-nova-senha">Confirmar nova senha</label>
+        <input type="password" id="confirmar-nova-senha" minlength="8" maxlength="128" required>
+      </div>
+      <button type="submit" class="botao-primario">Salvar nova senha</button>
+    </form>
+  `;
+}
+
+function abrirFormularioRedefinirSenha(token) {
+  abrirModal('Criar nova senha', htmlFormularioRedefinirSenha());
+  const campoNovaSenha = document.getElementById('nova-senha');
+  const campoConfirmarNovaSenha = document.getElementById('confirmar-nova-senha');
+  limparErroAoDigitar(campoNovaSenha);
+  limparErroAoDigitar(campoConfirmarNovaSenha);
+
+  document.getElementById('form-redefinir-senha').addEventListener('submit', async (evento) => {
+    evento.preventDefault();
+    limparErrosDoFormulario(evento.target);
+
+    const senha = campoNovaSenha.value;
+    const confirmarSenha = campoConfirmarNovaSenha.value;
+    let temErro = false;
+
+    if (senha.length < 8) {
+      mostrarErroCampo(campoNovaSenha, 'A senha precisa ter pelo menos 8 caracteres.');
+      temErro = true;
+    }
+    if (!confirmarSenha) {
+      mostrarErroCampo(campoConfirmarNovaSenha, 'Confirme sua nova senha.');
+      temErro = true;
+    } else if (senha !== confirmarSenha) {
+      mostrarErroCampo(campoConfirmarNovaSenha, 'As senhas não são iguais.');
+      temErro = true;
+    }
+    if (temErro) return;
+
+    const botaoSalvar = evento.target.querySelector('button[type="submit"]');
+    const textoOriginalBotao = botaoSalvar.innerHTML;
+    botaoSalvar.disabled = true;
+    botaoSalvar.innerHTML = '<i class="fa-solid fa-spinner icone-carregando"></i>';
+
+    try {
+      const resposta = await fetch(`${API_BASE_URL}/auth/redefinir-senha`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, senha }),
+      });
+      const resultado = await lerRespostaApi(resposta, 'Não foi possível redefinir a senha.');
+      fecharModal();
+      mostrarToast(resultado.mensagem);
+    } catch (erro) {
+      console.error('Erro ao redefinir senha:', erro);
+      mostrarToast(erro.message || 'Não foi possível redefinir a senha.');
+    } finally {
+      botaoSalvar.disabled = false;
+      botaoSalvar.innerHTML = textoOriginalBotao;
+    }
+  });
+}
+
 document.getElementById('botao-esqueceu-senha').addEventListener('click', () => {
   abrirModal('Recuperar senha', htmlFormularioEsqueciSenha());
 
   const campoRecuperarEmail = document.getElementById('recuperar-email');
   limparErroAoDigitar(campoRecuperarEmail);
 
-  document.getElementById('form-esqueceu-senha').addEventListener('submit', (evento) => {
+  document.getElementById('form-esqueceu-senha').addEventListener('submit', async (evento) => {
     evento.preventDefault();
     limparErrosDoFormulario(evento.target);
 
@@ -2474,13 +2540,34 @@ document.getElementById('botao-esqueceu-senha').addEventListener('click', () => 
     }
 
     const botaoEnviar = evento.target.querySelector('button[type="submit"]');
+    const textoOriginalBotao = botaoEnviar.innerHTML;
+    botaoEnviar.disabled = true;
+    botaoEnviar.innerHTML = '<i class="fa-solid fa-spinner icone-carregando"></i>';
 
-    comLoadingBotao(botaoEnviar, () => {
+    try {
+      const resposta = await fetch(`${API_BASE_URL}/auth/recuperar-senha`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const resultado = await lerRespostaApi(resposta, 'Não foi possível solicitar a recuperação.');
       fecharModal();
-      mostrarToast('📧 Se esse e-mail existir, enviamos um link de redefinição (simulado).');
-    });
+      mostrarToast(resultado.mensagem);
+    } catch (erro) {
+      console.error('Erro ao solicitar recuperação de senha:', erro);
+      mostrarToast(erro.message || 'Não foi possível solicitar a recuperação.');
+    } finally {
+      botaoEnviar.disabled = false;
+      botaoEnviar.innerHTML = textoOriginalBotao;
+    }
   });
 });
+
+const tokenRecuperacao = new URLSearchParams(window.location.hash.slice(1)).get('reset_token');
+if (tokenRecuperacao) {
+  window.history.replaceState(window.history.state, document.title, window.location.pathname + window.location.search);
+  abrirFormularioRedefinirSenha(tokenRecuperacao);
+}
 
 // --- Formulário de cadastro ---
 const campoCadastroNome = document.getElementById('cadastro-nome');

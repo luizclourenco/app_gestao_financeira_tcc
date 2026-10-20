@@ -12,7 +12,7 @@
   e quer que o cache antigo seja descartado.
 */
 
-const CACHE_NOME = 'meu-bolso-v3';
+const CACHE_NOME = 'meu-bolso-v4';
 
 const ARQUIVOS_PARA_GUARDAR_OFFLINE = [
   './',
