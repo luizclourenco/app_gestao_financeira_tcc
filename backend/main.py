@@ -1,12 +1,18 @@
 import base64
 import hashlib
 import hmac
+import html
+import json
+import logging
 import os
 import secrets
 from contextlib import asynccontextmanager, closing
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Literal
+from urllib.error import HTTPError, URLError
+from urllib.parse import quote, urlsplit
+from urllib.request import Request, urlopen
 
 from fastapi import Depends, FastAPI, HTTPException, Path, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -14,8 +20,11 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 import jwt
 from pydantic import BaseModel, EmailStr, Field
 from psycopg2 import IntegrityError
+from psycopg2.extras import RealDictCursor
 
 from database import get_db
+
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
@@ -45,6 +54,15 @@ class UsuarioAuth(BaseModel):
 class UsuarioPerfilAtualizacao(BaseModel):
     nome: str = Field(min_length=1, max_length=100)
     email: EmailStr = Field(max_length=150)
+
+
+class SolicitarRecuperacaoSenha(BaseModel):
+    email: EmailStr
+
+
+class RedefinirSenha(BaseModel):
+    token: str = Field(min_length=40, max_length=200)
+    senha: str = Field(min_length=8, max_length=128)
 
 
 class TransacaoCreate(BaseModel):
@@ -146,6 +164,92 @@ def verificar_senha(senha: str, senha_hash: str) -> bool:
     return hmac.compare_digest(hash_recebido, hash_esperado)
 
 
+def _garantir_tabela_tokens_recuperacao(cursor: RealDictCursor) -> None:
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS tokens_recuperacao_senha (
+            id BIGSERIAL PRIMARY KEY,
+            usuario_id INT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+            token_hash CHAR(64) NOT NULL UNIQUE,
+            expira_em TIMESTAMPTZ NOT NULL,
+            usado_em TIMESTAMPTZ,
+            criado_em TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+        """
+    )
+    cursor.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_tokens_recuperacao_usuario_criado
+        ON tokens_recuperacao_senha (usuario_id, criado_em DESC)
+        """
+    )
+
+
+def _enviar_email_recuperacao(email: str, token: str) -> None:
+    api_key = os.getenv("RESEND_API_KEY")
+    remetente = os.getenv("RESEND_FROM_EMAIL")
+    frontend_url = os.getenv("FRONTEND_URL")
+    if not api_key or not remetente or not frontend_url:
+        raise RuntimeError(
+            "Configure RESEND_API_KEY, RESEND_FROM_EMAIL e FRONTEND_URL no backend."
+        )
+
+    partes_url = urlsplit(frontend_url)
+    if (
+        partes_url.scheme != "https"
+        or not partes_url.netloc
+        or partes_url.query
+        or partes_url.fragment
+    ):
+        raise RuntimeError("FRONTEND_URL deve ser uma URL HTTPS sem query ou fragmento.")
+
+    link = f"{frontend_url.rstrip('/')}/#reset_token={quote(token, safe='')}"
+    link_seguro = html.escape(link, quote=True)
+    corpo_texto = (
+        "Recebemos uma solicitação para redefinir a senha da sua conta Meu Bolso. "
+        f"Acesse este link em até 30 minutos: {link}"
+    )
+    corpo_html = (
+        "<p>Recebemos uma solicitação para redefinir a senha da sua conta Meu Bolso.</p>"
+        f'<p><a href="{link_seguro}">Redefinir minha senha</a></p>'
+        "<p>O link expira em 30 minutos. Se você não fez essa solicitação, ignore este e-mail.</p>"
+    )
+    payload = json.dumps(
+        {
+            "from": remetente,
+            "to": [email],
+            "subject": "Redefinição de senha - Meu Bolso",
+            "text": corpo_texto,
+            "html": corpo_html,
+        }
+    ).encode("utf-8")
+    requisicao = Request(
+        "https://api.resend.com/emails",
+        data=payload,
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+
+    try:
+        with urlopen(requisicao, timeout=15) as resposta:
+            if not 200 <= resposta.status < 300:
+                raise RuntimeError(f"Resend respondeu com HTTP {resposta.status}.")
+    except HTTPError as erro:
+        logger.error("Resend recusou o envio de recuperação (HTTP %s).", erro.code)
+        raise RuntimeError("O serviço de e-mail recusou o envio.") from None
+    except (URLError, OSError):
+        logger.error("Não foi possível conectar ao serviço Resend.")
+        raise RuntimeError("Não foi possível conectar ao serviço de e-mail.") from None
+
+
+MENSAGEM_RECUPERACAO_SOLICITADA = (
+    "Se o e-mail estiver cadastrado, enviaremos instruções para redefinir a senha."
+)
+
+
 @app.post("/api/auth/cadastro")
 def cadastro(user: UsuarioAuth):
     try:
@@ -190,6 +294,125 @@ def login(user: UsuarioAuth):
         raise HTTPException(status_code=401, detail="Credenciais inválidas.")
 
     return resposta_autenticacao(usuario)
+
+
+@app.post("/api/auth/recuperar-senha", status_code=202)
+def solicitar_recuperacao_senha(solicitacao: SolicitarRecuperacaoSenha):
+    token = secrets.token_urlsafe(32)
+    token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+    with closing(get_db()) as conn:
+        with conn.cursor() as cursor:
+            _garantir_tabela_tokens_recuperacao(cursor)
+            cursor.execute(
+                "DELETE FROM tokens_recuperacao_senha WHERE expira_em < NOW() - INTERVAL '1 day'"
+            )
+            cursor.execute(
+                "SELECT id FROM usuarios WHERE email = %s FOR UPDATE",
+                (solicitacao.email,),
+            )
+            usuario = cursor.fetchone()
+            if not usuario:
+                conn.commit()
+                return {"mensagem": MENSAGEM_RECUPERACAO_SOLICITADA}
+
+            cursor.execute(
+                """
+                SELECT 1
+                FROM tokens_recuperacao_senha
+                WHERE usuario_id = %s
+                  AND criado_em > NOW() - INTERVAL '1 minute'
+                LIMIT 1
+                """,
+                (usuario["id"],),
+            )
+            if cursor.fetchone():
+                conn.commit()
+                return {"mensagem": MENSAGEM_RECUPERACAO_SOLICITADA}
+
+            cursor.execute(
+                """
+                INSERT INTO tokens_recuperacao_senha (usuario_id, token_hash, expira_em)
+                VALUES (%s, %s, NOW() + INTERVAL '30 minutes')
+                """,
+                (usuario["id"], token_hash),
+            )
+        conn.commit()
+
+    try:
+        _enviar_email_recuperacao(str(solicitacao.email), token)
+    except RuntimeError as erro:
+        with closing(get_db()) as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    "DELETE FROM tokens_recuperacao_senha WHERE token_hash = %s",
+                    (token_hash,),
+                )
+            conn.commit()
+        logger.error("Falha no envio do e-mail de recuperação: %s", erro)
+        raise HTTPException(
+            status_code=503,
+            detail="Não foi possível enviar o e-mail de recuperação. Tente novamente mais tarde.",
+        ) from None
+
+    with closing(get_db()) as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                UPDATE tokens_recuperacao_senha
+                SET usado_em = NOW()
+                WHERE usuario_id = %s
+                  AND token_hash <> %s
+                  AND usado_em IS NULL
+                """,
+                (usuario["id"], token_hash),
+            )
+        conn.commit()
+
+    return {"mensagem": MENSAGEM_RECUPERACAO_SOLICITADA}
+
+
+@app.post("/api/auth/redefinir-senha")
+def redefinir_senha(solicitacao: RedefinirSenha):
+    token_hash = hashlib.sha256(solicitacao.token.encode("utf-8")).hexdigest()
+    nova_senha_hash = hash_senha(solicitacao.senha)
+
+    with closing(get_db()) as conn:
+        with conn.cursor() as cursor:
+            _garantir_tabela_tokens_recuperacao(cursor)
+            cursor.execute(
+                """
+                SELECT id, usuario_id
+                FROM tokens_recuperacao_senha
+                WHERE token_hash = %s
+                  AND usado_em IS NULL
+                  AND expira_em > NOW()
+                FOR UPDATE
+                """,
+                (token_hash,),
+            )
+            token = cursor.fetchone()
+            if not token:
+                raise HTTPException(
+                    status_code=400,
+                    detail="O link de redefinição é inválido ou expirou. Solicite outro.",
+                )
+
+            cursor.execute(
+                "UPDATE usuarios SET senha_hash = %s WHERE id = %s",
+                (nova_senha_hash, token["usuario_id"]),
+            )
+            cursor.execute(
+                """
+                UPDATE tokens_recuperacao_senha
+                SET usado_em = NOW()
+                WHERE usuario_id = %s AND usado_em IS NULL
+                """,
+                (token["usuario_id"],),
+            )
+        conn.commit()
+
+    return {"mensagem": "Senha redefinida. Você já pode entrar com a nova senha."}
 
 
 @app.put("/api/auth/perfil")
