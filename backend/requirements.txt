@@ -1,0 +1,6 @@
+fastapi
+uvicorn[standard]
+psycopg2-binary
+python-dotenv
+email-validator
+PyJWT>=2.10,<3

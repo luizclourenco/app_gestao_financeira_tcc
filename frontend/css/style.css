@@ -1754,7 +1754,7 @@ html[data-privado="ativo"] .valor-sensivel {
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.2s ease, transform 0.2s ease;
-  z-index: 300;
+  z-index: 600;
   max-width: 85%;
   text-align: center;
 }

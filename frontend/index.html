@@ -49,9 +49,8 @@
       pessoa entrar ou criar conta. Depois disso, o JavaScript
       esconde essa tela e revela o app normal por baixo.
 
-      Isso representa a tabela USUARIO do DER — por enquanto é só
-      visual (guarda num localStorage), mas no dia que existir
-      back-end, é aqui que entraria a chamada de login de verdade.
+      O cadastro e o login consultam o backend; os dados financeiros
+      são carregados usando o ID da conta autenticada.
     -->
     <section id="tela-login" class="tela-auth">
       <div class="auth-conteudo">
@@ -94,7 +93,7 @@
               campo de texto (position: absolute), em vez de do lado.
             -->
             <div class="campo-senha">
-              <input type="password" id="login-senha" placeholder="••••••••" required>
+              <input type="password" id="login-senha" placeholder="Mínimo 8 caracteres" minlength="8" required>
               <button type="button" class="botao-olho-senha" data-campo-senha="login-senha" aria-label="Mostrar ou esconder senha">
                 <i class="fa-regular fa-eye"></i>
               </button>
@@ -116,7 +115,7 @@
           <div class="campo-formulario">
             <label for="cadastro-senha">Senha</label>
             <div class="campo-senha">
-              <input type="password" id="cadastro-senha" placeholder="Mínimo 6 caracteres" minlength="6" required>
+              <input type="password" id="cadastro-senha" placeholder="Mínimo 8 caracteres" minlength="8" required>
               <button type="button" class="botao-olho-senha" data-campo-senha="cadastro-senha" aria-label="Mostrar ou esconder senha">
                 <i class="fa-regular fa-eye"></i>
               </button>
@@ -125,7 +124,7 @@
           <button type="submit" class="botao-primario">Criar conta</button>
         </form>
 
-        <p class="auth-aviso">🚧 Login visual por enquanto — a validação de verdade vem com o back-end.</p>
+        <p class="auth-aviso">Seu cadastro e login são validados no servidor.</p>
       </div>
     </section>
 
@@ -213,7 +212,7 @@
           <span class="rotulo">Saldo atual</span>
           <button class="botao-icone botao-olho" id="botao-olho" aria-label="Mostrar ou esconder saldo"><i class="fa-regular fa-eye" id="icone-olho"></i></button>
         </div>
-        <p class="valor-saldo valor-sensivel" id="valor-saldo">R$ 4.320,00</p>
+        <p class="valor-saldo valor-sensivel" id="valor-saldo"><!-- Exemplo anterior: R$ 4.320,00 -->R$ 0,00</p>
         <span class="data-saldo">Hoje, 02 de Setembro</span>
       </div>
 
@@ -222,14 +221,14 @@
         <div class="card card-mini">
           <span class="rotulo">Receitas</span>
           <div class="linha-valor">
-            <strong class="valor-positivo valor-sensivel" id="mini-total-receitas">R$ 6.250,00</strong>
+            <strong class="valor-positivo valor-sensivel" id="mini-total-receitas"><!-- Exemplo anterior: R$ 6.250,00 -->R$ 0,00</strong>
             <span class="selo selo-positivo">↑</span>
           </div>
         </div>
         <div class="card card-mini">
           <span class="rotulo">Despesas</span>
           <div class="linha-valor">
-            <strong class="valor-negativo valor-sensivel" id="mini-total-despesas">R$ 1.930,00</strong>
+            <strong class="valor-negativo valor-sensivel" id="mini-total-despesas"><!-- Exemplo anterior: R$ 1.930,00 -->R$ 0,00</strong>
             <span class="selo selo-negativo">↓</span>
           </div>
         </div>
@@ -248,9 +247,9 @@
 
         <div class="resumo-mes-conteudo">
           <div class="resumo-mes-textos">
-            <p><span class="ponto ponto-receita"></span> Receitas <strong class="valor-positivo valor-sensivel" id="resumo-total-receitas">R$ 6.250,00</strong></p>
-            <p><span class="ponto ponto-despesa"></span> Despesas <strong class="valor-negativo valor-sensivel" id="resumo-total-despesas">R$ 1.930,00</strong></p>
-            <p class="saldo-mes">Saldo<br><strong class="valor-sensivel" id="resumo-saldo">R$ 4.320,00</strong></p>
+            <p><span class="ponto ponto-receita"></span> Receitas <strong class="valor-positivo valor-sensivel" id="resumo-total-receitas"><!-- Exemplo anterior: R$ 6.250,00 -->R$ 0,00</strong></p>
+            <p><span class="ponto ponto-despesa"></span> Despesas <strong class="valor-negativo valor-sensivel" id="resumo-total-despesas"><!-- Exemplo anterior: R$ 1.930,00 -->R$ 0,00</strong></p>
+            <p class="saldo-mes">Saldo<br><strong class="valor-sensivel" id="resumo-saldo"><!-- Exemplo anterior: R$ 4.320,00 -->R$ 0,00</strong></p>
           </div>
 
           <!--
@@ -258,8 +257,8 @@
             usando um truque chamado "conic-gradient".
             O número 69% está fixo por enquanto (dado mockado).
           -->
-          <div class="donut" id="donut-grafico" style="--percentual: 69;">
-            <span class="donut-texto valor-sensivel" id="donut-texto">69%</span>
+          <div class="donut" id="donut-grafico" style="--percentual: 0;">
+            <span class="donut-texto valor-sensivel" id="donut-texto">0%</span>
           </div>
         </div>
         <p class="legenda-donut">Economia</p>
@@ -282,6 +281,7 @@
         </div>
 
         <ul class="lista-categorias">
+          <!-- Categorias de gastos fictícias antigas, mantidas como referência:
           <li class="item-categoria">
             <span class="icone-categoria" data-cor="moradia"><i class="fa-solid fa-house"></i></span>
             <div class="info-categoria">
@@ -337,6 +337,7 @@
             </div>
             <span class="porcentagem-categoria valor-sensivel">31%</span>
           </li>
+          -->
         </ul>
       </div>
 
@@ -387,10 +388,8 @@
       -->
       <div id="container-lancamentos">
 
-      <!-- Grupo do dia de hoje -->
-      <p class="titulo-grupo-data">Hoje — 02/09/2025</p>
-
       <ul class="lista-lancamentos" id="lista-hoje">
+        <!-- Lançamentos fictícios antigos, mantidos como referência:
         <li class="lancamento" data-tipo="receita">
           <span class="icone-lancamento icone-receita"><i class="fa-solid fa-sack-dollar"></i></span>
           <div class="info-lancamento">
@@ -430,12 +429,11 @@
           <strong class="valor-positivo valor-sensivel">R$ 1.750,00</strong>
           <span class="seta-lancamento">›</span>
         </li>
+        -->
       </ul>
 
-      <!-- Grupo do dia de ontem -->
-      <p class="titulo-grupo-data">Ontem — 01/09/2025</p>
-
       <ul class="lista-lancamentos" id="lista-ontem">
+        <!-- Lançamentos fictícios antigos, mantidos como referência:
         <li class="lancamento" data-tipo="despesa">
           <span class="icone-lancamento icone-despesa"><i class="fa-solid fa-utensils"></i></span>
           <div class="info-lancamento">
@@ -465,6 +463,7 @@
           <strong class="valor-negativo valor-sensivel">- R$ 30,00</strong>
           <span class="seta-lancamento">›</span>
         </li>
+        -->
       </ul>
 
       </div>
@@ -707,7 +706,7 @@
 
   </div>
 
-  <!-- Biblioteca de gráficos, usada no relatório de Categorias -->
+  <!-- Biblioteca de gráficos usada pelos relatórios -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
 
   <!-- Ligando nosso arquivo de JavaScript (sempre no final do body) -->

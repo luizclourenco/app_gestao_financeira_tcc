@@ -1,3 +1,23 @@
+let usuarioIdAtual = null;
+let tokenAcessoAtual = null;
+
+function chaveDeDadosDoUsuario(chave) {
+  return usuarioIdAtual === null ? null : `${chave}:usuario-${usuarioIdAtual}`;
+}
+
+function lerDadoDoUsuario(chave) {
+  const chaveCompleta = chaveDeDadosDoUsuario(chave);
+  return chaveCompleta === null ? null : localStorage.getItem(chaveCompleta);
+}
+
+function salvarDadoDoUsuario(chave, valor) {
+  const chaveCompleta = chaveDeDadosDoUsuario(chave);
+  if (chaveCompleta === null) {
+    throw new Error('É necessário entrar em uma conta para salvar esses dados.');
+  }
+  localStorage.setItem(chaveCompleta, valor);
+}
+
 /*
   ================================================
   PARTE 1 - TROCAR DE TELA (navegação do menu inferior)
@@ -189,21 +209,13 @@ campoBuscaLancamentos.addEventListener('input', aplicarFiltrosMovimentacoes);
   PARTE 4 - ESTADO FINANCEIRO (os "dados" do app)
   ================================================
 
-  Como ainda não temos back-end, guardamos os valores aqui numa
-  variável de JavaScript. Ela começa com os mesmos números que já
-  estavam fixos no HTML. Sempre que um lançamento novo é
-  adicionado, atualizamos esses números e "repintamos" a tela.
-
-  OBS pro futuro: quando o back-end existir, em vez de calcular
-  tudo aqui na mão, essas informações virão prontas de uma
-  chamada fetch('sua-api/resumo') — a função atualizarResumoNaTela()
-  continua útil do mesmo jeito, só muda de onde os dados vêm.
+  Os totais começam zerados e são preenchidos pelo resumo do backend.
 */
 
 let estadoFinanceiro = {
-  receitas: 6250,
-  despesas: 1930,
-  saldo: 4320,
+  receitas: 0,
+  despesas: 0,
+  saldo: 0,
 };
 
 // Transforma um número (ex: 1930) em texto de dinheiro (ex: "R$ 1.930,00")
@@ -406,14 +418,14 @@ const corPorCategoria = {
 };
 
 function obterLimitesCategoria() {
-  const limitesSalvos = JSON.parse(localStorage.getItem(CHAVE_LIMITES_CATEGORIA)) || {};
+  const limitesSalvos = JSON.parse(lerDadoDoUsuario(CHAVE_LIMITES_CATEGORIA) || '{}');
   return { ...limitesPadrao, ...limitesSalvos };
 }
 
 function salvarLimiteCategoria(categoria, novoLimite) {
   const limites = obterLimitesCategoria();
   limites[categoria] = novoLimite;
-  localStorage.setItem(CHAVE_LIMITES_CATEGORIA, JSON.stringify(limites));
+  salvarDadoDoUsuario(CHAVE_LIMITES_CATEGORIA, JSON.stringify(limites));
 }
 
 // Soma todos os lançamentos de despesa já exibidos na tela que
@@ -519,7 +531,7 @@ const orcamentoMensalRestante = document.getElementById('orcamento-mensal-restan
 const orcamentoMensalBarra = document.getElementById('orcamento-mensal-barra');
 
 function obterOrcamentoMensal() {
-  const valorSalvo = localStorage.getItem(CHAVE_ORCAMENTO_MENSAL);
+  const valorSalvo = lerDadoDoUsuario(CHAVE_ORCAMENTO_MENSAL);
   return valorSalvo !== null ? parseFloat(valorSalvo) : ORCAMENTO_MENSAL_PADRAO;
 }
 
@@ -556,7 +568,7 @@ function renderizarOrcamentoMensal() {
 
 campoOrcamentoMensal.addEventListener('change', () => {
   const novoValor = parseFloat(campoOrcamentoMensal.value) || 0;
-  localStorage.setItem(CHAVE_ORCAMENTO_MENSAL, novoValor);
+  salvarDadoDoUsuario(CHAVE_ORCAMENTO_MENSAL, novoValor);
   renderizarOrcamentoMensal();
 });
 
@@ -579,11 +591,11 @@ const listaRecorrentesElemento = document.getElementById('lista-recorrentes');
 const estadoVazioRecorrentes = document.getElementById('estado-vazio-recorrentes');
 
 function obterRegrasRecorrentes() {
-  return JSON.parse(localStorage.getItem(CHAVE_RECORRENTES)) || [];
+  return JSON.parse(lerDadoDoUsuario(CHAVE_RECORRENTES) || '[]');
 }
 
 function salvarRegrasRecorrentes(regras) {
-  localStorage.setItem(CHAVE_RECORRENTES, JSON.stringify(regras));
+  salvarDadoDoUsuario(CHAVE_RECORRENTES, JSON.stringify(regras));
 }
 
 // Guarda uma nova regra (chamada quando a pessoa marca "Repetir
@@ -657,23 +669,22 @@ document.getElementById('botao-simular-mes').addEventListener('click', () => {
       categoria: regra.categoria,
       valor: regra.valor,
       recorrente: true,
-    }, true);
+    });
   });
 
   mostrarToast(`${regras.length} lançamento(s) recorrente(s) gerado(s) para o próximo mês! 🔁`);
 });
 
 
-// Guarda a "instância" do gráfico de evolução (pra poder destruir e
-// redesenhar sem o Chart.js reclamar) e os 5 pontos fixos de exemplo
-// que representam dias anteriores aos que existem na tela — ambos
-// precisam existir ANTES da PARTE 7 (ver explicação mais abaixo, na
-// função desenharGraficoEvolucaoSaldo).
+// Guarda a instância do gráfico e um ponto inicial neutro; ambos precisam
+// existir antes da PARTE 7, que pode redesenhar o gráfico.
 let instanciaGraficoEvolucao = null;
 
 const evolucaoSaldoExemplo = {
-  dias: ['Qui', 'Sex', 'Sáb', 'Dom', 'Seg'],
-  valores: [3850, 4200, 3980, 4450, 4100],
+  // Dados fictícios anteriores: dias ['Qui', 'Sex', 'Sáb', 'Dom', 'Seg'],
+  // valores [3850, 4200, 3980, 4450, 4100].
+  dias: [],
+  valores: [0],
 };
 
 /*
@@ -695,7 +706,18 @@ const iconesPorCategoria = {
 };
 
 const listaHoje = document.getElementById('lista-hoje');
-const CHAVE_LOCALSTORAGE = 'meu-bolso:lancamentos-extras';
+const API_BASE_URL = window.location.protocol === 'https:'
+  ? `${window.location.origin}/api`
+  : `http://${window.location.hostname || 'localhost'}:8000/api`;
+let categoriasDoMes = [];
+
+function cabecalhosAutenticados(headers = {}) {
+  if (!tokenAcessoAtual) {
+    throw new Error('Entre na sua conta para acessar esses dados.');
+  }
+
+  return { ...headers, Authorization: `Bearer ${tokenAcessoAtual}` };
+}
 
 // Monta (mas NÃO insere na página ainda) o <li> de um lançamento.
 // Reaproveitada tanto pra criar um lançamento novo quanto pra
@@ -736,8 +758,8 @@ function criarElementoLancamento(dados) {
   listaHoje.prepend(item); // "prepend" coloca no TOPO da lista, não no final
 }
 
-// Junta: cria o elemento na tela + atualiza os totais + (opcionalmente) salva
-function adicionarLancamento(dados, salvarNoLocalStorage) {
+// Junta: cria o elemento na tela e atualiza os totais.
+function adicionarLancamento(dados) {
   criarElementoLancamento(dados);
   aplicarFiltrosMovimentacoes(); // o item novo precisa respeitar o filtro/busca atual
 
@@ -759,11 +781,6 @@ function adicionarLancamento(dados, salvarNoLocalStorage) {
     renderizarOrcamentoMensal();
   }
 
-  if (salvarNoLocalStorage) {
-    const lancamentosSalvos = JSON.parse(localStorage.getItem(CHAVE_LOCALSTORAGE)) || [];
-    lancamentosSalvos.push(dados);
-    localStorage.setItem(CHAVE_LOCALSTORAGE, JSON.stringify(lancamentosSalvos));
-  }
 }
 
 // HTML do formulário que aparece dentro do modal
@@ -821,7 +838,7 @@ document.getElementById('botao-novo-lancamento').addEventListener('click', () =>
 
   // O formulário só existe no HTML depois que abrirModal() o inseriu,
   // então o addEventListener dele tem que ficar AQUI dentro.
-  document.getElementById('form-novo-lancamento').addEventListener('submit', (evento) => {
+  document.getElementById('form-novo-lancamento').addEventListener('submit', async (evento) => {
     evento.preventDefault(); // impede a página de recarregar (comportamento padrão de forms)
 
     const tipoEscolhido = document.querySelector('input[name="tipo"]:checked').value;
@@ -836,9 +853,28 @@ document.getElementById('botao-novo-lancamento').addEventListener('click', () =>
     }
 
     const botaoSalvar = evento.target.querySelector('button[type="submit"]');
+    const textoOriginalBotao = botaoSalvar.innerHTML;
+    botaoSalvar.disabled = true;
+    botaoSalvar.innerHTML = '<i class="fa-solid fa-spinner icone-carregando"></i>';
 
-    comLoadingBotao(botaoSalvar, () => {
-      adicionarLancamento({ tipo: tipoEscolhido, descricao, categoria, valor, recorrente }, true);
+    try {
+      const resposta = await fetch(`${API_BASE_URL}/transacoes`, {
+        method: 'POST',
+        headers: cabecalhosAutenticados({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({
+          categoria: tipoEscolhido === 'receita' ? 'Salário' : categoria,
+          descricao,
+          valor,
+          tipo: tipoEscolhido,
+        }),
+      });
+
+      if (!resposta.ok) {
+        throw new Error(`A API recusou o lançamento (HTTP ${resposta.status}).`);
+      }
+
+      adicionarLancamento({ tipo: tipoEscolhido, descricao, categoria, valor, recorrente });
+      await carregarCategoriasBackend();
 
       if (recorrente) {
         registrarRegraRecorrente({ tipo: tipoEscolhido, descricao, categoria, valor });
@@ -851,21 +887,17 @@ document.getElementById('botao-novo-lancamento').addEventListener('click', () =>
       // — por isso ele toma o lugar do "Lançamento adicionado!" nesse caso.
       const avisoDeLimite = tipoEscolhido === 'despesa' ? verificarLimiteExcedido(categoria) : null;
       mostrarToast(avisoDeLimite || 'Lançamento adicionado! 🎉');
-    });
+    } catch (erro) {
+      console.error('Erro ao salvar transação no backend:', erro);
+      mostrarToast('Não foi possível salvar o lançamento. Verifique sua conexão com o servidor.');
+    } finally {
+      botaoSalvar.disabled = false;
+      botaoSalvar.innerHTML = textoOriginalBotao;
+    }
   });
 });
 
-// Ao carregar a página, recupera lançamentos salvos em visitas anteriores
-function carregarLancamentosSalvos() {
-  const lancamentosSalvos = JSON.parse(localStorage.getItem(CHAVE_LOCALSTORAGE)) || [];
-  lancamentosSalvos.forEach((dados) => adicionarLancamento(dados, false));
-}
-
-carregarLancamentosSalvos();
-
-// Primeira pintura dos cards de orçamento/recorrentes, já com os
-// lançamentos carregados acima (precisa vir depois de
-// iconesPorCategoria existir, por isso só aqui e não na PARTE 6.5/6.6)
+// Primeira pintura dos cards vazios; os dados da conta são carregados após o login.
 renderizarOrcamentoPorCategoria();
 renderizarOrcamentoMensal();
 renderizarRecorrentes();
@@ -1047,29 +1079,69 @@ telaMovimentacoes.addEventListener('click', (evento) => {
   vem a lista (em vez de fixo aqui no JS, viria de um fetch).
 */
 
-const categoriasExemplo = [
-  { nome: 'Moradia', valor: 650, porcentagem: 33, icone: 'fa-house', cor: 'moradia' },
-  { nome: 'Alimentação', valor: 420, porcentagem: 22, icone: 'fa-cart-shopping', cor: 'alimentacao' },
-  { nome: 'Transporte', valor: 280, porcentagem: 14, icone: 'fa-gas-pump', cor: 'transporte' },
-  { nome: 'Outros', valor: 580, porcentagem: 31, icone: 'fa-ellipsis', cor: 'outros' },
-];
+function criarItemCategoria(categoria, totalGastos) {
+  const percentual = totalGastos > 0 ? (categoria.total / totalGastos) * 100 : 0;
+  const nome = categoria.categoria;
+  const categoriaNormalizada = CATEGORIAS_DE_DESPESA.includes(nome) ? nome : 'Outros';
+  const item = document.createElement('li');
+  item.className = 'item-categoria';
+
+  const icone = document.createElement('span');
+  icone.className = 'icone-categoria';
+  icone.dataset.cor = corPorCategoria[categoriaNormalizada];
+  const elementoIcone = document.createElement('i');
+  elementoIcone.className = `fa-solid ${iconesPorCategoria[categoriaNormalizada] || iconesPorCategoria.Outros}`;
+  icone.append(elementoIcone);
+
+  const informacoes = document.createElement('div');
+  informacoes.className = 'info-categoria';
+  const linha = document.createElement('div');
+  linha.className = 'linha-categoria-topo';
+  const nomeElemento = document.createElement('span');
+  nomeElemento.textContent = nome;
+  const valorElemento = document.createElement('span');
+  valorElemento.className = 'valor-sensivel';
+  valorElemento.textContent = formatarMoeda(categoria.total);
+  linha.append(nomeElemento, valorElemento);
+
+  const barra = document.createElement('div');
+  barra.className = 'barra-progresso';
+  const preenchimento = document.createElement('div');
+  preenchimento.className = 'barra-progresso-preenchida';
+  preenchimento.dataset.cor = corPorCategoria[categoriaNormalizada];
+  preenchimento.style.width = `${percentual}%`;
+  barra.append(preenchimento);
+  informacoes.append(linha, barra);
+
+  const percentualElemento = document.createElement('span');
+  percentualElemento.className = 'porcentagem-categoria valor-sensivel';
+  percentualElemento.textContent = `${Math.round(percentual)}%`;
+  item.append(icone, informacoes, percentualElemento);
+  return item;
+}
+
+function renderizarCategoriasGastos(categorias, lista) {
+  lista.replaceChildren();
+
+  if (categorias.length === 0) {
+    const vazio = document.createElement('li');
+    vazio.className = 'estado-vazio-categorias';
+    vazio.textContent = 'Nenhuma despesa registrada neste mês.';
+    lista.append(vazio);
+    return;
+  }
+
+  const totalGastos = categorias.reduce((total, categoria) => total + categoria.total, 0);
+  categorias.forEach((categoria) => {
+    lista.append(criarItemCategoria(categoria, totalGastos));
+  });
+}
 
 document.getElementById('link-ver-todas-categorias').addEventListener('click', (evento) => {
   evento.preventDefault(); // link <a> não deve navegar de verdade
 
-  const htmlLista = categoriasExemplo.map((categoria) => `
-    <div class="modal-lista-item">
-      <div class="linha-categoria-topo">
-        <span><span class="icone-categoria icone-categoria-inline" data-cor="${categoria.cor}"><i class="fa-solid ${categoria.icone}"></i></span> ${categoria.nome}</span>
-        <span class="valor-sensivel">${formatarMoeda(categoria.valor)}</span>
-      </div>
-      <div class="barra-progresso">
-        <div class="barra-progresso-preenchida" data-cor="${categoria.cor}" style="width: ${categoria.porcentagem}%;"></div>
-      </div>
-    </div>
-  `).join('');
-
-  abrirModal('Todas as categorias', htmlLista);
+  abrirModal('Todas as categorias', '<ul id="lista-modal-categorias" class="lista-categorias"></ul>');
+  renderizarCategoriasGastos(categoriasDoMes, document.getElementById('lista-modal-categorias'));
 });
 
 /*
@@ -1086,21 +1158,12 @@ document.getElementById('link-ver-todas-categorias').addEventListener('click', (
 
 const CHAVE_METAS = 'meu-bolso:metas';
 
-// Usado só na primeira visita (quando ainda não existe nada salvo),
-// pra o card não aparecer vazio antes da pessoa criar a dela mesma
-const metasPadrao = [
-  { id: 1, nome: 'Reserva de Emergência', meta: 10000, atual: 6000, icone: 'fa-piggy-bank' },
-  { id: 2, nome: 'Viagem para a praia', meta: 3000, atual: 900, icone: 'fa-umbrella-beach' },
-  { id: 3, nome: 'Notebook novo', meta: 5000, atual: 4000, icone: 'fa-laptop' },
-];
+const metasPadrao = [];
 
 function obterMetas() {
-  const metasSalvas = localStorage.getItem(CHAVE_METAS);
+  const metasSalvas = lerDadoDoUsuario(CHAVE_METAS);
 
   if (metasSalvas === null) {
-    // Primeira vez: semeia com os exemplos e já salva, pra próxima
-    // visita ler os mesmos dados (inclusive se a pessoa editar algo)
-    localStorage.setItem(CHAVE_METAS, JSON.stringify(metasPadrao));
     return metasPadrao;
   }
 
@@ -1108,7 +1171,7 @@ function obterMetas() {
 }
 
 function salvarMetas(metas) {
-  localStorage.setItem(CHAVE_METAS, JSON.stringify(metas));
+  salvarDadoDoUsuario(CHAVE_METAS, JSON.stringify(metas));
 }
 
 const containerMetaPrincipal = document.getElementById('container-meta-principal');
@@ -1337,8 +1400,6 @@ renderizarMetaPrincipal();
   antes de desenhar um novo — senão o Chart.js reclama que já
   existe um gráfico ali.
 */
-let instanciaGraficoCategorias = null;
-
 // Lê o valor atual de uma variável de cor do CSS (ex: "--cor-texto"),
 // pra o gráfico usar as cores certas tanto no tema claro quanto escuro
 function lerCorCSS(nomeVariavel) {
@@ -1346,11 +1407,8 @@ function lerCorCSS(nomeVariavel) {
 }
 
 /*
-  Gráfico de linha mostrando como o saldo foi mudando nos últimos
-  dias (dado de exemplo, já que ainda não temos histórico real
-  vindo de um back-end). Fica na Tela 1, visível direto — por isso,
-  diferente do gráfico de categorias, não espera um modal abrir;
-  ele já é desenhado assim que a página carrega.
+  Gráfico de linha mostrando como o saldo foi mudando nos últimos dias.
+  Fica na Tela 1 e é redesenhado quando os valores mudam.
 
   OBS: "instanciaGraficoEvolucao" e "evolucaoSaldoExemplo" são
   declaradas lá em cima, ANTES da PARTE 7 — não aqui — porque
@@ -1376,9 +1434,7 @@ function calcularSaldoDeUmaLista(elementoLista) {
   return total;
 }
 
-// Pega os 5 pontos fixos de exemplo e completa com os 2 pontos reais
-// (Ontem e Hoje), calculados em cima do saldo de partida (último
-// ponto fixo) + o que realmente está lançado em cada dia
+// Completa o ponto inicial com os lançamentos de ontem e de hoje.
 function calcularEvolucaoSaldo() {
   const saldoDeReferencia = evolucaoSaldoExemplo.valores[evolucaoSaldoExemplo.valores.length - 1];
 
@@ -1451,74 +1507,192 @@ function desenharGraficoEvolucaoSaldo() {
 
 desenharGraficoEvolucaoSaldo();
 
-function desenharGraficoCategorias() {
-  const canvas = document.getElementById('grafico-categorias');
-  if (!canvas) return;
+let instanciaGraficoRelatorio = null;
 
-  // Mesma proteção do gráfico de evolução: sem Chart.js carregado,
-  // não dá pra desenhar — mas isso não pode travar o resto do app.
-  if (typeof Chart === 'undefined') {
-    console.warn('Chart.js não carregou — gráfico de categorias não será exibido.');
-    return;
-  }
-
-  if (instanciaGraficoCategorias) {
-    instanciaGraficoCategorias.destroy();
-  }
-
-  instanciaGraficoCategorias = new Chart(canvas, {
-    type: 'doughnut',
-    data: {
-      labels: categoriasExemplo.map((categoria) => categoria.nome),
-      datasets: [{
-        data: categoriasExemplo.map((categoria) => categoria.valor),
-        // Mesmas cores usadas nos ícones de categoria (CORES_POR_CATEGORIA),
-        // só que aqui precisam ser string de cor mesmo (o Chart.js não lê
-        // variável CSS direto) — por isso repetidas na mesma ordem.
-        backgroundColor: ['#BF6E4D', '#D9A23B', '#5B7A9D', '#9B9388'],
-        borderColor: lerCorCSS('--cor-branco'),
-        borderWidth: 3,
-      }],
-    },
-    options: {
-      plugins: {
-        legend: {
-          position: 'bottom',
-          labels: {
-            color: lerCorCSS('--cor-texto'),
-            font: { family: 'Inter', size: 12 },
-            padding: 14,
-          },
-        },
-      },
-    },
-  });
+function obterMesSelecionado() {
+  const agora = new Date();
+  return `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}`;
 }
 
-// Atalhos de relatório (Mensal / Categorias / Comparativos)
+async function buscarDadosRelatorio(caminho, parametros = '') {
+  if (usuarioIdAtual === null) {
+    throw new Error('Entre na sua conta para consultar os relatórios.');
+  }
+
+  const resposta = await fetch(
+    `${API_BASE_URL}/relatorios/${caminho}/${usuarioIdAtual}${parametros}`,
+    { headers: cabecalhosAutenticados() },
+  );
+  const dados = await resposta.json();
+  if (!resposta.ok) {
+    throw new Error(typeof dados.detail === 'string' ? dados.detail : 'Não foi possível carregar o relatório.');
+  }
+  return dados;
+}
+
+async function carregarCategoriasBackend() {
+  if (usuarioIdAtual === null) return;
+
+  const agora = new Date();
+  const parametros = `?ano=${agora.getFullYear()}&mes=${agora.getMonth() + 1}`;
+  try {
+    const categorias = await buscarDadosRelatorio('categorias', parametros);
+    categoriasDoMes = categorias.map((categoria) => ({
+      categoria: categoria.categoria,
+      total: Number(categoria.total),
+    }));
+    renderizarCategoriasGastos(
+      categoriasDoMes,
+      document.querySelector('.lista-categorias'),
+    );
+  } catch (erro) {
+    console.error('Erro ao carregar gastos por categoria:', erro);
+    mostrarToast('Não foi possível carregar os gastos por categoria.');
+  }
+}
+
+function destruirGraficoRelatorio() {
+  if (instanciaGraficoRelatorio) {
+    instanciaGraficoRelatorio.destroy();
+    instanciaGraficoRelatorio = null;
+  }
+}
+
+function exibirErroRelatorio(erro) {
+  console.error('Erro ao carregar relatório:', erro);
+  const status = document.getElementById('relatorio-status');
+  if (status) status.textContent = erro.message || 'Não foi possível carregar o relatório.';
+}
+
+function criarOpcoesMesRelatorio() {
+  return `<label class="campo-formulario">
+    Mês do relatório
+    <input type="month" id="mes-relatorio" value="${obterMesSelecionado()}">
+  </label>`;
+}
+
+async function carregarRelatorioMensal(valorMes = obterMesSelecionado()) {
+  if (!/^\d{4}-\d{2}$/.test(valorMes)) {
+    document.getElementById('relatorio-status').textContent = 'Selecione um mês válido.';
+    return;
+  }
+  const [ano, mes] = valorMes.split('-').map(Number);
+  const status = document.getElementById('relatorio-status');
+  status.textContent = 'Carregando dados do mês...';
+
+  try {
+    const dias = await buscarDadosRelatorio('mensal', `?ano=${ano}&mes=${mes}`);
+    const totalReceitas = dias.reduce((total, dia) => total + dia.receitas, 0);
+    const totalDespesas = dias.reduce((total, dia) => total + dia.despesas, 0);
+    const resumo = document.getElementById('relatorio-resumo');
+    resumo.textContent = `Receitas: ${formatarMoeda(totalReceitas)} | Despesas: ${formatarMoeda(totalDespesas)} | Saldo: ${formatarMoeda(totalReceitas - totalDespesas)}`;
+    status.textContent = dias.length ? '' : 'Não há movimentações nesse mês.';
+
+    destruirGraficoRelatorio();
+    instanciaGraficoRelatorio = new Chart(document.getElementById('grafico-relatorio'), {
+      type: 'line',
+      data: {
+        labels: dias.map((dia) => new Date(`${dia.data}T00:00:00`).toLocaleDateString('pt-BR')),
+        datasets: [
+          { label: 'Receitas', data: dias.map((dia) => dia.receitas), borderColor: '#2F9E6E', backgroundColor: '#2F9E6E22', tension: 0.3 },
+          { label: 'Despesas', data: dias.map((dia) => dia.despesas), borderColor: '#B5473A', backgroundColor: '#B5473A22', tension: 0.3 },
+        ],
+      },
+      options: { responsive: true, plugins: { legend: { position: 'bottom' } } },
+    });
+  } catch (erro) {
+    exibirErroRelatorio(erro);
+  }
+}
+
+async function carregarRelatorioCategorias(valorMes = obterMesSelecionado()) {
+  if (!/^\d{4}-\d{2}$/.test(valorMes)) {
+    document.getElementById('relatorio-status').textContent = 'Selecione um mês válido.';
+    return;
+  }
+  const [ano, mes] = valorMes.split('-').map(Number);
+  const status = document.getElementById('relatorio-status');
+  status.textContent = 'Carregando gastos por categoria...';
+
+  try {
+    const categorias = await buscarDadosRelatorio('categorias', `?ano=${ano}&mes=${mes}`);
+    status.textContent = categorias.length ? '' : 'Não há despesas categorizadas nesse mês.';
+    destruirGraficoRelatorio();
+    instanciaGraficoRelatorio = new Chart(document.getElementById('grafico-relatorio'), {
+      type: 'doughnut',
+      data: {
+        labels: categorias.map((categoria) => categoria.categoria),
+        datasets: [{
+          data: categorias.map((categoria) => categoria.total),
+          backgroundColor: ['#BF6E4D', '#D9A23B', '#5B7A9D', '#9B9388', '#2F9E6E', '#B5473A'],
+          borderColor: lerCorCSS('--cor-branco'),
+          borderWidth: 3,
+        }],
+      },
+      options: { responsive: true, plugins: { legend: { position: 'bottom' } } },
+    });
+  } catch (erro) {
+    exibirErroRelatorio(erro);
+  }
+}
+
+async function carregarRelatorioComparativos() {
+  const status = document.getElementById('relatorio-status');
+  status.textContent = 'Carregando os últimos seis meses...';
+
+  try {
+    const meses = await buscarDadosRelatorio('comparativos');
+    status.textContent = meses.length ? '' : 'Não há movimentações para comparar.';
+    destruirGraficoRelatorio();
+    instanciaGraficoRelatorio = new Chart(document.getElementById('grafico-relatorio'), {
+      type: 'bar',
+      data: {
+        labels: meses.map((item) => {
+          const [ano, mes] = item.mes.split('-').map(Number);
+          return new Date(ano, mes - 1, 1).toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
+        }),
+        datasets: [
+          { label: 'Receitas', data: meses.map((item) => item.receitas), backgroundColor: '#2F9E6E' },
+          { label: 'Despesas', data: meses.map((item) => item.despesas), backgroundColor: '#B5473A' },
+        ],
+      },
+      options: { responsive: true, plugins: { legend: { position: 'bottom' } } },
+    });
+  } catch (erro) {
+    exibirErroRelatorio(erro);
+  }
+}
+
+function abrirRelatorio(nome, conteudo, carregar) {
+  destruirGraficoRelatorio();
+  abrirModal(`Relatório: ${nome}`, conteudo);
+  carregar();
+}
+
 document.querySelectorAll('.atalho-relatorio').forEach((botao) => {
   botao.addEventListener('click', () => {
-    const nomeRelatorio = botao.getAttribute('data-relatorio');
-
-    if (nomeRelatorio === 'Categorias') {
-      abrirModal('Relatório: Categorias', `
-        <canvas id="grafico-categorias" height="220"></canvas>
-        <p style="color: var(--cor-texto-suave); font-size: 12px; text-align: center; margin-top: 14px;">
-          Dados de exemplo — quando o back-end existir, o gráfico passa a usar os lançamentos reais.
-        </p>
-      `);
-      // O <canvas> só existe no HTML depois que abrirModal() o inseriu
-      desenharGraficoCategorias();
-      return;
-    }
-
-    abrirModal(`Relatório: ${nomeRelatorio}`, `
-      <p style="color: var(--cor-texto-suave); font-size: 14px; line-height: 1.5;">
-        🚧 Esse relatório vai ser gerado com dados reais assim que o back-end
-        estiver pronto. Por enquanto, essa é só a "portinha" (o botão) já
-        funcionando — a parte de gerar o gráfico vem depois.
-      </p>
-    `);
+    const nome = botao.getAttribute('data-relatorio');
+    const seletorMes = nome === 'Comparativos' ? '' : criarOpcoesMesRelatorio();
+    abrirRelatorio(nome, `
+      ${seletorMes}
+      <p id="relatorio-resumo" style="color: var(--cor-texto); text-align: center;"></p>
+      <p id="relatorio-status" style="color: var(--cor-texto-suave); text-align: center;"></p>
+      <canvas id="grafico-relatorio" height="220"></canvas>
+    `, () => {
+      if (nome === 'Mensal') {
+        document.getElementById('mes-relatorio').addEventListener('change', (evento) => {
+          carregarRelatorioMensal(evento.target.value);
+        });
+        carregarRelatorioMensal();
+      } else if (nome === 'Categorias') {
+        document.getElementById('mes-relatorio').addEventListener('change', (evento) => {
+          carregarRelatorioCategorias(evento.target.value);
+        });
+        carregarRelatorioCategorias();
+      } else {
+        carregarRelatorioComparativos();
+      }
+    });
   });
 });
 
@@ -1570,13 +1744,6 @@ if ('serviceWorker' in navigator) {
   ================================================
   PARTE 12 - LOGIN, CADASTRO E LOGOUT
   ================================================
-
-  Como ainda não existe back-end, "entrar" ou "criar conta" aqui
-  não checa senha nem nada de verdade — só guarda o nome/e-mail no
-  localStorage e esconde a tela de login. O objetivo é mostrar o
-  FLUXO (tela existe, formulário funciona, app reconhece "logado"),
-  pra depois só trocar essa parte por uma chamada de API de
-  verdade (fetch pra uma rota tipo /login).
 */
 
 const CHAVE_USUARIO = 'meu-bolso:usuario';
@@ -1653,41 +1820,114 @@ function entrarNoApp(nome, email) {
   avatarUsuario.textContent = nome.trim().charAt(0).toUpperCase() || '?';
 }
 
+function limparDadosDaContaAtual() {
+  listaHoje.innerHTML = '';
+  document.getElementById('lista-ontem').innerHTML = '';
+  categoriasDoMes = [];
+  renderizarCategoriasGastos([], document.querySelector('.lista-categorias'));
+
+  const estadoAntigo = { ...estadoFinanceiro };
+  estadoFinanceiro = { receitas: 0, despesas: 0, saldo: 0 };
+  atualizarResumoNaTela(estadoAntigo);
+  renderizarMetaPrincipal();
+  renderizarOrcamentoPorCategoria();
+  renderizarOrcamentoMensal();
+  renderizarRecorrentes();
+  aplicarFiltrosMovimentacoes();
+}
+
+async function ativarUsuario(usuario, mostrarBoasVindas = false) {
+  const idUsuario = Number(usuario.id);
+  if (!Number.isInteger(idUsuario) || idUsuario <= 0) {
+    throw new Error('O servidor não retornou um ID de usuário válido.');
+  }
+  if (typeof usuario.access_token !== 'string' || !usuario.access_token) {
+    throw new Error('O servidor não retornou uma credencial de acesso válida.');
+  }
+  usuarioIdAtual = idUsuario;
+  tokenAcessoAtual = usuario.access_token;
+  const perfil = {
+    id: idUsuario,
+    nome: usuario.nome || usuario.email.split('@')[0],
+    email: usuario.email,
+  };
+  localStorage.setItem(CHAVE_USUARIO, JSON.stringify(perfil));
+
+  limparDadosDaContaAtual();
+  entrarNoApp(perfil.nome, perfil.email);
+  await carregarDadosBackend(idUsuario);
+  renderizarMetaPrincipal();
+
+  if (mostrarBoasVindas) mostrarOnboarding();
+}
+
+async function lerRespostaApi(resposta, mensagemPadrao) {
+  const dados = await resposta.json();
+  if (!resposta.ok) {
+    throw new Error(typeof dados.detail === 'string' ? dados.detail : mensagemPadrao);
+  }
+  return dados;
+}
+
 // --- Formulário de login ---
-document.getElementById('form-login').addEventListener('submit', (evento) => {
+document.getElementById('form-login').addEventListener('submit', async (evento) => {
   evento.preventDefault();
 
   const email = document.getElementById('login-email').value.trim();
-  if (!email) return;
+  const senha = document.getElementById('login-senha').value;
+  if (!email || !senha) return;
 
   const botaoEntrar = evento.target.querySelector('button[type="submit"]');
+  const textoOriginalBotao = botaoEntrar.innerHTML;
+  botaoEntrar.disabled = true;
+  botaoEntrar.innerHTML = '<i class="fa-solid fa-spinner icone-carregando"></i>';
 
-  comLoadingBotao(botaoEntrar, () => {
-    // Se a pessoa já tinha se cadastrado antes (mesmo e-mail), usa o
-    // nome salvo. Senão, usa a parte antes do "@" como nome provisório.
-    const usuarioSalvo = JSON.parse(localStorage.getItem(CHAVE_USUARIO));
-    const nome = (usuarioSalvo && usuarioSalvo.email === email) ? usuarioSalvo.nome : email.split('@')[0];
-
-    localStorage.setItem(CHAVE_USUARIO, JSON.stringify({ nome, email }));
-    entrarNoApp(nome, email);
-  });
+  try {
+    const resposta = await fetch(`${API_BASE_URL}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, senha }),
+    });
+    const usuario = await lerRespostaApi(resposta, 'Não foi possível entrar na conta.');
+    await ativarUsuario(usuario);
+  } catch (erro) {
+    console.error('Erro ao entrar:', erro);
+    mostrarToast(erro.message || 'Não foi possível conectar ao servidor.');
+  } finally {
+    botaoEntrar.disabled = false;
+    botaoEntrar.innerHTML = textoOriginalBotao;
+  }
 });
 
 // --- Formulário de cadastro ---
-document.getElementById('form-cadastro').addEventListener('submit', (evento) => {
+document.getElementById('form-cadastro').addEventListener('submit', async (evento) => {
   evento.preventDefault();
 
   const nome = document.getElementById('cadastro-nome').value.trim();
   const email = document.getElementById('cadastro-email').value.trim();
-  if (!nome || !email) return;
+  const senha = document.getElementById('cadastro-senha').value;
+  if (!nome || !email || !senha) return;
 
   const botaoCriarConta = evento.target.querySelector('button[type="submit"]');
+  const textoOriginalBotao = botaoCriarConta.innerHTML;
+  botaoCriarConta.disabled = true;
+  botaoCriarConta.innerHTML = '<i class="fa-solid fa-spinner icone-carregando"></i>';
 
-  comLoadingBotao(botaoCriarConta, () => {
-    localStorage.setItem(CHAVE_USUARIO, JSON.stringify({ nome, email }));
-    entrarNoApp(nome, email);
-    mostrarOnboarding(); // só na criação de conta, não no login normal
-  });
+  try {
+    const resposta = await fetch(`${API_BASE_URL}/auth/cadastro`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nome, email, senha }),
+    });
+    const usuario = await lerRespostaApi(resposta, 'Não foi possível criar a conta.');
+    await ativarUsuario(usuario, true);
+  } catch (erro) {
+    console.error('Erro ao cadastrar usuário:', erro);
+    mostrarToast(erro.message || 'Não foi possível conectar ao servidor.');
+  } finally {
+    botaoCriarConta.disabled = false;
+    botaoCriarConta.innerHTML = textoOriginalBotao;
+  }
 });
 
 /*
@@ -1751,7 +1991,10 @@ document.getElementById('botao-pular-onboarding').addEventListener('click', fech
 // uma vez com querySelectorAll — assim clicar em qualquer um dá logout.
 document.querySelectorAll('.botao-sair-trigger').forEach((botao) => {
   botao.addEventListener('click', () => {
-    localStorage.removeItem(CHAVE_USUARIO);
+  localStorage.removeItem(CHAVE_USUARIO);
+  usuarioIdAtual = null;
+  tokenAcessoAtual = null;
+  limparDadosDaContaAtual();
     telaLogin.classList.remove('tela-auth-escondida');
     textoUsuarioLogado.textContent = '—';
     avatarUsuario.textContent = '?';
@@ -1767,18 +2010,6 @@ document.querySelectorAll('.botao-sair-trigger').forEach((botao) => {
     document.querySelector('[data-tela="tela-resumo"]').click();
   });
 });
-
-/*
-  OBS: antes, aqui a gente checava se já tinha um usuário salvo no
-  localStorage e pulava a tela de login direto pro app (igual
-  Gmail/Instagram fazem). Tiramos essa parte de propósito: agora a
-  tela de login sempre aparece primeiro quando a página carrega,
-  mesmo que a pessoa já tenha logado antes nesse navegador. O login
-  em si continua "lembrando" o nome de quem já se cadastrou (olha a
-  função de submit do #form-login, lá em cima) — só não pula mais a
-  tela sozinho.
-*/
-
 
 /*
   ================================================
@@ -1866,3 +2097,54 @@ botaoTema.addEventListener('click', () => {
   const novoTema = temaAtual === 'escuro' ? 'claro' : 'escuro';
   aplicarTema(novoTema);
 });
+
+async function carregarDadosBackend(idUsuario) {
+  try {
+    const respostaTransacoes = await fetch(`${API_BASE_URL}/transacoes/${idUsuario}`, {
+      headers: cabecalhosAutenticados(),
+    });
+    if (!respostaTransacoes.ok) {
+      throw new Error(`A API de transações respondeu com HTTP ${respostaTransacoes.status}.`);
+    }
+
+    const transacoes = await respostaTransacoes.json();
+    listaHoje.innerHTML = '';
+    transacoes.forEach((transacao) => {
+      criarElementoLancamento({
+        tipo: transacao.tipo,
+        descricao: transacao.descricao,
+        categoria: transacao.categoria,
+        valor: Number(transacao.valor),
+        recorrente: false,
+      });
+    });
+  } catch (erro) {
+    console.error('Erro ao carregar transações do FastAPI local:', erro);
+    mostrarToast('Não foi possível carregar os lançamentos da conta.');
+  }
+
+  try {
+    const respostaResumo = await fetch(`${API_BASE_URL}/resumo/${idUsuario}`, {
+      headers: cabecalhosAutenticados(),
+    });
+    if (!respostaResumo.ok) {
+      throw new Error(`A API de resumo respondeu com HTTP ${respostaResumo.status}.`);
+    }
+
+    const resumo = await respostaResumo.json();
+    const estadoAntigo = { ...estadoFinanceiro };
+    estadoFinanceiro.receitas = Number(resumo.total_receitas);
+    estadoFinanceiro.despesas = Number(resumo.total_despesas);
+    estadoFinanceiro.saldo = Number(resumo.saldo_atual);
+    atualizarResumoNaTela(estadoAntigo);
+  } catch (erro) {
+    console.error('Erro ao carregar o resumo do FastAPI local:', erro);
+    mostrarToast('Não foi possível carregar o resumo financeiro.');
+  }
+
+  await carregarCategoriasBackend();
+  renderizarOrcamentoPorCategoria();
+  renderizarOrcamentoMensal();
+  renderizarRecorrentes();
+  aplicarFiltrosMovimentacoes();
+}
