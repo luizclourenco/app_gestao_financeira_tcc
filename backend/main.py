@@ -42,12 +42,18 @@ class UsuarioAuth(BaseModel):
     nome: str | None = Field(default=None, max_length=100)
 
 
+class UsuarioPerfilAtualizacao(BaseModel):
+    nome: str = Field(min_length=1, max_length=100)
+    email: EmailStr = Field(max_length=150)
+
+
 class TransacaoCreate(BaseModel):
     categoria_id: int | None = Field(default=None, gt=0)
     categoria: str | None = Field(default=None, min_length=1, max_length=50)
     descricao: str = Field(min_length=1, max_length=150)
     valor: Decimal = Field(gt=0, max_digits=10, decimal_places=2)
     tipo: Literal["receita", "despesa"]
+    data: date = Field(default_factory=date.today)
 
 
 def _obter_segredo_autenticacao() -> bytes:
@@ -186,6 +192,35 @@ def login(user: UsuarioAuth):
     return resposta_autenticacao(usuario)
 
 
+@app.put("/api/auth/perfil")
+def atualizar_perfil(
+    perfil: UsuarioPerfilAtualizacao,
+    usuario_id: int = Depends(obter_usuario_autenticado),
+):
+    try:
+        with closing(get_db()) as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    """
+                    UPDATE usuarios
+                    SET nome = %s, email = %s
+                    WHERE id = %s
+                    RETURNING id, nome, email
+                    """,
+                    (perfil.nome, perfil.email, usuario_id),
+                )
+                usuario = cursor.fetchone()
+                if not usuario:
+                    raise HTTPException(status_code=404, detail="Usuário não encontrado.")
+            conn.commit()
+            return usuario
+    except IntegrityError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail="Este e-mail já está cadastrado em outra conta.",
+        ) from exc
+
+
 @app.get("/api/transacoes/{usuario_id}")
 def listar_transacoes(usuario_id: int = Depends(exigir_usuario_da_rota)):
     with closing(get_db()) as conn:
@@ -234,8 +269,8 @@ def criar_transacao(
                 cursor.execute(
                     """
                     INSERT INTO transacoes
-                        (usuario_id, categoria_id, descricao, valor, tipo)
-                    VALUES (%s, %s, %s, %s, %s)
+                        (usuario_id, categoria_id, descricao, valor, tipo, data)
+                    VALUES (%s, %s, %s, %s, %s, %s)
                     RETURNING id
                     """,
                     (
@@ -244,6 +279,7 @@ def criar_transacao(
                         transacao.descricao,
                         transacao.valor,
                         transacao.tipo,
+                        transacao.data,
                     ),
                 )
                 novo_id = cursor.fetchone()["id"]

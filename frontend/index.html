@@ -80,7 +80,7 @@
         </div>
 
         <!-- Formulário de login -->
-        <form id="form-login" class="auth-form">
+        <form id="form-login" class="auth-form" novalidate>
           <div class="campo-formulario">
             <label for="login-email">E-mail</label>
             <input type="email" id="login-email" placeholder="voce@email.com" required>
@@ -98,12 +98,13 @@
                 <i class="fa-regular fa-eye"></i>
               </button>
             </div>
+            <button type="button" class="link-esqueceu-senha" id="botao-esqueceu-senha">Esqueceu a senha?</button>
           </div>
           <button type="submit" class="botao-primario">Entrar</button>
         </form>
 
         <!-- Formulário de cadastro (começa escondido) -->
-        <form id="form-cadastro" class="auth-form auth-form-escondido">
+        <form id="form-cadastro" class="auth-form auth-form-escondido" novalidate>
           <div class="campo-formulario">
             <label for="cadastro-nome">Nome</label>
             <input type="text" id="cadastro-nome" placeholder="Seu nome" required>
@@ -117,6 +118,15 @@
             <div class="campo-senha">
               <input type="password" id="cadastro-senha" placeholder="Mínimo 8 caracteres" minlength="8" required>
               <button type="button" class="botao-olho-senha" data-campo-senha="cadastro-senha" aria-label="Mostrar ou esconder senha">
+                <i class="fa-regular fa-eye"></i>
+              </button>
+            </div>
+          </div>
+          <div class="campo-formulario">
+            <label for="cadastro-confirmar-senha">Confirmar senha</label>
+            <div class="campo-senha">
+              <input type="password" id="cadastro-confirmar-senha" placeholder="Digite a senha de novo" required>
+              <button type="button" class="botao-olho-senha" data-campo-senha="cadastro-confirmar-senha" aria-label="Mostrar ou esconder senha">
                 <i class="fa-regular fa-eye"></i>
               </button>
             </div>
@@ -371,6 +381,15 @@
         <input type="search" id="campo-busca-lancamentos" placeholder="Buscar por descrição...">
       </div>
 
+      <!-- Filtro por mês, montado pelo JS com os meses que realmente
+           existem nos lançamentos (ver atualizarOpcoesFiltroMes) -->
+      <div class="filtro-mes">
+        <i class="fa-solid fa-calendar-days"></i>
+        <select id="campo-filtro-mes">
+          <option value="todos">Todos os meses</option>
+        </select>
+      </div>
+
       <div class="abas-filtro">
         <button class="aba aba-ativa" data-filtro="todas">Todas</button>
         <button class="aba" data-filtro="receita">Receitas</button>
@@ -400,7 +419,7 @@
           <span class="seta-lancamento">›</span>
         </li>
 
-        <li class="lancamento" data-tipo="despesa">
+        <li class="lancamento" data-tipo="despesa" data-data="2025-09-02">
           <span class="icone-lancamento icone-despesa"><i class="fa-solid fa-cart-shopping"></i></span>
           <div class="info-lancamento">
             <strong>Supermercado</strong>
@@ -410,7 +429,7 @@
           <span class="seta-lancamento">›</span>
         </li>
 
-        <li class="lancamento" data-tipo="despesa">
+        <li class="lancamento" data-tipo="despesa" data-data="2025-09-02">
           <span class="icone-lancamento icone-despesa"><i class="fa-solid fa-gas-pump"></i></span>
           <div class="info-lancamento">
             <strong>Combustível</strong>
@@ -420,7 +439,7 @@
           <span class="seta-lancamento">›</span>
         </li>
 
-        <li class="lancamento" data-tipo="receita">
+        <li class="lancamento" data-tipo="receita" data-data="2025-09-02">
           <span class="icone-lancamento icone-receita"><i class="fa-solid fa-gift"></i></span>
           <div class="info-lancamento">
             <strong>Bônus</strong>
@@ -444,7 +463,7 @@
           <span class="seta-lancamento">›</span>
         </li>
 
-        <li class="lancamento" data-tipo="despesa">
+        <li class="lancamento" data-tipo="despesa" data-data="2025-09-01">
           <span class="icone-lancamento icone-despesa"><i class="fa-solid fa-house"></i></span>
           <div class="info-lancamento">
             <strong>Aluguel</strong>
@@ -454,7 +473,7 @@
           <span class="seta-lancamento">›</span>
         </li>
 
-        <li class="lancamento" data-tipo="despesa">
+        <li class="lancamento" data-tipo="despesa" data-data="2025-09-01">
           <span class="icone-lancamento icone-despesa"><i class="fa-solid fa-car-side"></i></span>
           <div class="info-lancamento">
             <strong>Transporte por app</strong>
@@ -553,6 +572,20 @@
         </div>
       </div>
 
+      <!-- Card de Categorias (customizáveis: nome + ícone, cada uma com
+           uma cor da paleta do app). As categorias daqui alimentam os
+           formulários de lançamento e o card de "Limites por categoria"
+           logo abaixo. -->
+      <div class="card">
+        <div class="card-cabecalho">
+          <h2 class="card-titulo">Categorias</h2>
+          <div class="acoes-card-titulo">
+            <button type="button" class="botao-icone botao-icone-pequeno" id="botao-nova-categoria" aria-label="Nova categoria"><i class="fa-solid fa-plus"></i></button>
+          </div>
+        </div>
+        <div id="lista-categorias" class="lista-categorias"></div>
+      </div>
+
       <!-- Card de Limites por categoria (orçamento mensal) -->
       <div class="card">
         <div class="card-cabecalho">
@@ -602,6 +635,10 @@
             <span class="icone-relatorio"><i class="fa-solid fa-chart-column"></i></span>
             <span>Comparativos</span>
           </button>
+          <button class="atalho-relatorio" data-relatorio="Exportar">
+            <span class="icone-relatorio"><i class="fa-solid fa-file-arrow-down"></i></span>
+            <span>Exportar CSV</span>
+          </button>
         </div>
       </div>
 
@@ -627,6 +664,9 @@
             <strong id="texto-usuario-logado" class="valor-sensivel">—</strong>
             <span class="rotulo">Conta conectada</span>
           </div>
+          <button type="button" class="botao-icone botao-icone-pequeno" id="botao-editar-perfil" aria-label="Editar perfil">
+            <i class="fa-solid fa-pen"></i>
+          </button>
         </div>
 
         <p class="rotulo" style="margin-bottom: 8px;">Tema de cor</p>
