@@ -240,7 +240,28 @@ def _enviar_email_recuperacao(email: str, token: str) -> None:
         raise RuntimeError("Nao foi possivel conectar ao servico de e-mail.") from None
 
     if resposta.status_code not in (200, 201, 202):
-        logger.error("Brevo recusou o envio do e-mail (HTTP %s).", resposta.status_code)
+        try:
+            erro_brevo = resposta.json()
+        except ValueError:
+            erro_brevo = {}
+        codigo_erro = (
+            erro_brevo.get("code")
+            if isinstance(erro_brevo, dict)
+            else None
+        )
+        mensagem_erro = (
+            erro_brevo.get("message")
+            if isinstance(erro_brevo, dict)
+            else None
+        )
+        logger.error(
+            "Brevo recusou o envio (HTTP %s, code=%s, message=%s).",
+            resposta.status_code,
+            codigo_erro or "indisponivel",
+            str(mensagem_erro).replace("\r", " ").replace("\n", " ")[:300]
+            if mensagem_erro
+            else "indisponivel",
+        )
         raise RuntimeError("O servico de e-mail recusou o envio.")
 
     try:
@@ -488,15 +509,27 @@ def criar_transacao(
                 if transacao.categoria:
                     cursor.execute(
                         """
-                        INSERT INTO categorias (nome, tipo)
-                        VALUES (%s, %s)
-                        ON CONFLICT (nome, tipo)
-                        DO UPDATE SET nome = EXCLUDED.nome
-                        RETURNING id
+                        SELECT id
+                        FROM categorias
+                        WHERE nome = %s AND tipo = %s
+                        ORDER BY id
+                        LIMIT 1
                         """,
                         (transacao.categoria, transacao.tipo),
                     )
-                    categoria_id = cursor.fetchone()["id"]
+                    categoria = cursor.fetchone()
+                    if categoria:
+                        categoria_id = categoria["id"]
+                    else:
+                        cursor.execute(
+                            """
+                            INSERT INTO categorias (nome, tipo)
+                            VALUES (%s, %s)
+                            RETURNING id
+                            """,
+                            (transacao.categoria, transacao.tipo),
+                        )
+                        categoria_id = cursor.fetchone()["id"]
                 elif categoria_id is None:
                     raise HTTPException(
                         status_code=400,
