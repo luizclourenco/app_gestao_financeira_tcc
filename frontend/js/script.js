@@ -1028,9 +1028,7 @@ const evolucaoSaldoExemplo = {
 const iconesPorCategoria = {};
 
 const listaHoje = document.getElementById('lista-hoje');
-const API_BASE_URL = window.location.protocol === 'https:'
-  ? `${window.location.origin}/api`
-  : `http://${window.location.hostname || 'localhost'}:8000/api`;
+const API_BASE_URL = 'https://app-gestao-financeira-tcc.onrender.com/api';
 let categoriasDoMes = [];
 
 function cabecalhosAutenticados(headers = {}) {
