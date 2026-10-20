@@ -245,8 +245,8 @@ def _enviar_email_recuperacao(email: str, token: str) -> None:
         raise RuntimeError("Não foi possível conectar ao serviço de e-mail.") from None
 
 
-MENSAGEM_RECUPERACAO_SOLICITADA = (
-    "Se o e-mail estiver cadastrado, enviaremos instruções para redefinir a senha."
+MENSAGEM_RECUPERACAO = (
+    "Se o e-mail estiver cadastrado, enviaremos instruções para recuperar a senha."
 )
 
 
@@ -314,7 +314,7 @@ def solicitar_recuperacao_senha(solicitacao: SolicitarRecuperacaoSenha):
             usuario = cursor.fetchone()
             if not usuario:
                 conn.commit()
-                return {"mensagem": MENSAGEM_RECUPERACAO_SOLICITADA}
+                return {"mensagem": MENSAGEM_RECUPERACAO}
 
             cursor.execute(
                 """
@@ -328,7 +328,7 @@ def solicitar_recuperacao_senha(solicitacao: SolicitarRecuperacaoSenha):
             )
             if cursor.fetchone():
                 conn.commit()
-                return {"mensagem": MENSAGEM_RECUPERACAO_SOLICITADA}
+                return {"mensagem": MENSAGEM_RECUPERACAO}
 
             cursor.execute(
                 """
@@ -369,7 +369,7 @@ def solicitar_recuperacao_senha(solicitacao: SolicitarRecuperacaoSenha):
             )
         conn.commit()
 
-    return {"mensagem": MENSAGEM_RECUPERACAO_SOLICITADA}
+    return {"mensagem": MENSAGEM_RECUPERACAO}
 
 
 @app.post("/api/auth/redefinir-senha")
