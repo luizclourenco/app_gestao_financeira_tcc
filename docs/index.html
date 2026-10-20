@@ -223,7 +223,7 @@
           <button class="botao-icone botao-olho" id="botao-olho" aria-label="Mostrar ou esconder saldo"><i class="fa-regular fa-eye" id="icone-olho"></i></button>
         </div>
         <p class="valor-saldo valor-sensivel" id="valor-saldo"><!-- Exemplo anterior: R$ 4.320,00 -->R$ 0,00</p>
-        <span class="data-saldo">Hoje, 02 de Setembro</span>
+        <span class="data-saldo" id="data-saldo-hoje"></span>
       </div>
 
       <!-- Dois cards lado a lado: Receitas e Despesas -->
@@ -249,9 +249,7 @@
         <div class="card-cabecalho">
           <h2 class="card-titulo">Resumo do mês</h2>
           <select class="seletor-mes" id="seletor-mes-resumo">
-            <option>Setembro</option>
-            <option>Agosto</option>
-            <option>Julho</option>
+            <option value="">Carregando...</option>
           </select>
         </div>
 
@@ -265,7 +263,7 @@
           <!--
             O "donut" (gráfico de rosca) é feito só com CSS,
             usando um truque chamado "conic-gradient".
-            O número 69% está fixo por enquanto (dado mockado).
+            O percentual é calculado com base nas receitas e despesas do mês.
           -->
           <div class="donut" id="donut-grafico" style="--percentual: 0;">
             <span class="donut-texto valor-sensivel" id="donut-texto">0%</span>
@@ -529,7 +527,7 @@
           O conteúdo aqui dentro é todo gerado via JavaScript agora
           (função renderizarMetaPrincipal), porque as metas deixaram
           de ser fixas no HTML — a pessoa pode criar, editar e
-          excluir quantas quiser, tudo salvo no localStorage.
+          excluir quantas quiser, tudo sincronizado com sua conta.
         -->
         <div id="container-meta-principal"></div>
       </div>
@@ -538,10 +536,8 @@
       <div class="card">
         <div class="card-cabecalho">
           <h2 class="card-titulo">Orçamento do mês</h2>
-          <select class="seletor-mes">
-            <option>Setembro</option>
-            <option>Agosto</option>
-            <option>Julho</option>
+          <select class="seletor-mes" id="seletor-mes-orcamento">
+            <option value="">Carregando...</option>
           </select>
         </div>
 
@@ -598,7 +594,7 @@
       <div class="card">
         <div class="card-cabecalho">
           <h2 class="card-titulo">Lançamentos recorrentes</h2>
-          <button type="button" class="link-ver-todas botao-sem-borda" id="botao-simular-mes">Simular próximo mês ⏭</button>
+          <button type="button" class="link-ver-todas botao-sem-borda" id="botao-simular-mes">Gerar lançamentos do próximo mês ⏭</button>
         </div>
         <div id="lista-recorrentes"></div>
         <p class="estado-vazio-recorrentes" id="estado-vazio-recorrentes">
@@ -646,8 +642,7 @@
         Card de Conta: mostra quem está logado e tem o botão de SAIR
         bem visível (antes ele estava escondido atrás da engrenagem
         lá em cima, o que confundia). Representa a tabela USUARIO
-        do DER — por enquanto só lê do localStorage, mas no dia que
-        existir back-end, é aqui que mostraria os dados reais.
+        do DER. Os dados de perfil são carregados e atualizados no backend.
       -->
       <div class="card">
         <div class="card-cabecalho">

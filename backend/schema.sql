@@ -14,8 +14,17 @@ CREATE TABLE IF NOT EXISTS tokens_recuperacao_senha (
     criado_em TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+ALTER TABLE tokens_recuperacao_senha
+    ADD COLUMN IF NOT EXISTS usado_em TIMESTAMPTZ;
+
 CREATE INDEX IF NOT EXISTS idx_tokens_recuperacao_usuario_criado
     ON tokens_recuperacao_senha (usuario_id, criado_em DESC);
+
+CREATE TABLE IF NOT EXISTS preferencias_usuario (
+    usuario_id INT PRIMARY KEY REFERENCES usuarios(id) ON DELETE CASCADE,
+    dados JSONB NOT NULL DEFAULT '{}'::jsonb,
+    atualizado_em TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 
 CREATE TABLE IF NOT EXISTS categorias (
     id SERIAL PRIMARY KEY,

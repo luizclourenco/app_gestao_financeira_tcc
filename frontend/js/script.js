@@ -16,6 +16,7 @@ function salvarDadoDoUsuario(chave, valor) {
     throw new Error('É necessário entrar em uma conta para salvar esses dados.');
   }
   localStorage.setItem(chaveCompleta, valor);
+  return sincronizarPreferenciasBackend();
 }
 
 /*
@@ -158,7 +159,7 @@ const campoFiltroMes = document.getElementById('campo-filtro-mes');
   Reconstrói as opções do seletor de mês com base nos meses que
   realmente aparecem nos lançamentos na tela (data-data="AAAA-MM-DD").
   Chamamos isso toda vez que um lançamento pode ter mudado de mês:
-  ao carregar a página, criar, editar, excluir ou simular o próximo mês.
+  ao carregar a página, criar, editar, excluir ou gerar recorrências.
 */
 function atualizarOpcoesFiltroMes() {
   const mesSelecionadoAntes = campoFiltroMes.value || 'todos';
@@ -251,6 +252,7 @@ let estadoFinanceiro = {
   despesas: 0,
   saldo: 0,
 };
+let mesDashboardSelecionado = obterDataDeHoje().slice(0, 7);
 
 // Transforma um número (ex: 1930) em texto de dinheiro (ex: "R$ 1.930,00")
 function formatarMoeda(numero) {
@@ -515,7 +517,7 @@ function limparErroAoDigitar(inputElemento) {
 
   Cada categoria de despesa pode ter um limite mensal definido pela
   pessoa (ex: "Alimentação: R$ 500"). Guardamos esses limites num
-  objeto simples no localStorage — só {categoria: valorLimite}.
+  estrutura de preferências do usuário, sincronizada com o backend.
 
   O "gasto atual" de cada categoria não é guardado separado: a gente
   sempre RECALCULA ele na hora, somando os lançamentos de despesa que
@@ -571,12 +573,12 @@ const categoriasPadrao = [
 ];
 
 function obterCategorias() {
-  const salvas = JSON.parse(localStorage.getItem(CHAVE_CATEGORIAS));
+  const salvas = JSON.parse(lerDadoDoUsuario(CHAVE_CATEGORIAS) || 'null');
   return (salvas && salvas.length > 0) ? salvas : categoriasPadrao;
 }
 
 function salvarCategorias(lista) {
-  localStorage.setItem(CHAVE_CATEGORIAS, JSON.stringify(lista));
+  return salvarDadoDoUsuario(CHAVE_CATEGORIAS, JSON.stringify(lista));
 }
 
 const CATEGORIAS_DE_DESPESA = [];
@@ -667,7 +669,7 @@ function abrirFormularioCategoria(categoriaExistente, indice) {
 
     const botaoSalvar = evento.target.querySelector('button[type="submit"]');
 
-    comLoadingBotao(botaoSalvar, () => {
+    comLoadingBotao(botaoSalvar, async () => {
       const categorias = obterCategorias();
 
       if (categoriaExistente) {
@@ -679,7 +681,7 @@ function abrirFormularioCategoria(categoriaExistente, indice) {
         categorias.push({ nome, icone, cor });
       }
 
-      salvarCategorias(categorias);
+      await salvarCategorias(categorias);
       recalcularCategorias();
       renderizarListaCategorias();
       renderizarOrcamentoPorCategoria();
@@ -692,7 +694,7 @@ function abrirFormularioCategoria(categoriaExistente, indice) {
     const botaoExcluir = document.getElementById('botao-excluir-categoria');
     let aguardandoConfirmacao = false;
 
-    botaoExcluir.addEventListener('click', () => {
+    botaoExcluir.addEventListener('click', async () => {
       const categorias = obterCategorias();
 
       if (categorias.length <= 1) {
@@ -708,7 +710,7 @@ function abrirFormularioCategoria(categoriaExistente, indice) {
       }
 
       categorias.splice(indice, 1);
-      salvarCategorias(categorias);
+      await salvarCategorias(categorias);
       recalcularCategorias();
       renderizarListaCategorias();
       renderizarOrcamentoPorCategoria();
@@ -736,10 +738,10 @@ function obterLimitesCategoria() {
   return { ...limitesPadrao, ...limitesSalvos };
 }
 
-function salvarLimiteCategoria(categoria, novoLimite) {
+async function salvarLimiteCategoria(categoria, novoLimite) {
   const limites = obterLimitesCategoria();
   limites[categoria] = novoLimite;
-  salvarDadoDoUsuario(CHAVE_LIMITES_CATEGORIA, JSON.stringify(limites));
+  await salvarDadoDoUsuario(CHAVE_LIMITES_CATEGORIA, JSON.stringify(limites));
 }
 
 // Soma todos os lançamentos de despesa já exibidos na tela que
@@ -748,6 +750,7 @@ function calcularGastoPorCategoria(categoria) {
   let total = 0;
 
   document.querySelectorAll('.lancamento[data-tipo="despesa"]').forEach((item) => {
+    if (!item.getAttribute('data-data')?.startsWith(mesDashboardSelecionado)) return;
     const categoriaDoItem = item.querySelector('.categoria-lancamento').textContent;
     if (categoriaDoItem === categoria) {
       total += paraNumero(item.querySelector('.valor-negativo').textContent);
@@ -801,13 +804,13 @@ function renderizarOrcamentoPorCategoria() {
 
 // Quando a pessoa muda o valor do limite de uma categoria, salva e
 // repinta tudo (a barra pode mudar de cor na hora, por exemplo)
-listaOrcamentoCategorias.addEventListener('change', (evento) => {
+listaOrcamentoCategorias.addEventListener('change', async (evento) => {
   if (!evento.target.classList.contains('campo-limite-categoria')) return;
 
   const categoria = evento.target.getAttribute('data-categoria');
   const novoLimite = parseFloat(evento.target.value) || 0;
 
-  salvarLimiteCategoria(categoria, novoLimite);
+  await salvarLimiteCategoria(categoria, novoLimite);
   renderizarOrcamentoPorCategoria();
 });
 
@@ -852,6 +855,7 @@ function obterOrcamentoMensal() {
 function calcularTotalDespesas() {
   let total = 0;
   document.querySelectorAll('.lancamento[data-tipo="despesa"]').forEach((item) => {
+    if (!item.getAttribute('data-data')?.startsWith(mesDashboardSelecionado)) return;
     total += paraNumero(item.querySelector('.valor-negativo').textContent);
   });
   return total;
@@ -880,9 +884,9 @@ function renderizarOrcamentoMensal() {
   }
 }
 
-campoOrcamentoMensal.addEventListener('change', () => {
+campoOrcamentoMensal.addEventListener('change', async () => {
   const novoValor = parseFloat(campoOrcamentoMensal.value) || 0;
-  salvarDadoDoUsuario(CHAVE_ORCAMENTO_MENSAL, novoValor);
+  await salvarDadoDoUsuario(CHAVE_ORCAMENTO_MENSAL, novoValor);
   renderizarOrcamentoMensal();
 });
 
@@ -894,10 +898,8 @@ campoOrcamentoMensal.addEventListener('change', () => {
 
   Uma "regra recorrente" é só um molde (tipo, descrição, categoria,
   valor) guardado separado dos lançamentos do mês. Ela não aparece
-  na lista de Movimentações por si só — só quando a pessoa aperta
-  "Simular próximo mês" (ou, no mundo real com back-end, quando o
-  servidor detecta que virou o mês) é que um lançamento de verdade é
-  criado a partir dela.
+  na lista de Movimentações por si só; a pessoa decide quando gerar
+  os lançamentos do próximo mês no backend.
 */
 
 const CHAVE_RECORRENTES = 'meu-bolso:lancamentos-recorrentes';
@@ -908,16 +910,16 @@ function obterRegrasRecorrentes() {
   return JSON.parse(lerDadoDoUsuario(CHAVE_RECORRENTES) || '[]');
 }
 
-function salvarRegrasRecorrentes(regras) {
-  salvarDadoDoUsuario(CHAVE_RECORRENTES, JSON.stringify(regras));
+async function salvarRegrasRecorrentes(regras) {
+  await salvarDadoDoUsuario(CHAVE_RECORRENTES, JSON.stringify(regras));
 }
 
 // Guarda uma nova regra (chamada quando a pessoa marca "Repetir
 // todo mês" ao criar um lançamento)
-function registrarRegraRecorrente(regra) {
+async function registrarRegraRecorrente(regra) {
   const regras = obterRegrasRecorrentes();
   regras.push({ ...regra, id: Date.now() });
-  salvarRegrasRecorrentes(regras);
+  await salvarRegrasRecorrentes(regras);
   renderizarRecorrentes();
 }
 
@@ -951,23 +953,19 @@ function renderizarRecorrentes() {
 
 // Delegação de evento: clicar no "lixeirinha" de qualquer regra
 // (antigas ou criadas depois) remove ela da lista
-listaRecorrentesElemento.addEventListener('click', (evento) => {
+listaRecorrentesElemento.addEventListener('click', async (evento) => {
   const botao = evento.target.closest('.botao-excluir-recorrente');
   if (!botao) return;
 
   const idParaRemover = Number(botao.getAttribute('data-id'));
   const regras = obterRegrasRecorrentes().filter((regra) => regra.id !== idParaRemover);
 
-  salvarRegrasRecorrentes(regras);
+  await salvarRegrasRecorrentes(regras);
   renderizarRecorrentes();
   mostrarToast('Lançamento recorrente removido.');
 });
 
-// Botão "Simular próximo mês": gera, de uma vez, um lançamento novo
-// pra cada regra recorrente cadastrada. Como o app ainda não tem
-// back-end nem data real avançando sozinha, esse botão existe pra
-// mostrar a lógica funcionando sem precisar esperar um mês de
-// verdade passar.
+// Gera no backend um lançamento para cada regra recorrente cadastrada.
 document.getElementById('botao-simular-mes').addEventListener('click', async () => {
   const regras = obterRegrasRecorrentes();
 
@@ -989,10 +987,14 @@ document.getElementById('botao-simular-mes').addEventListener('click', async () 
         recorrente: true,
         data: dataDoProximoMes,
       };
-      await salvarTransacaoBackend(lancamento);
+      const transacaoSalva = await salvarTransacaoBackend(lancamento);
+      lancamento.id = transacaoSalva.id;
       adicionarLancamento(lancamento);
       gerados += 1;
     }
+    atualizarOpcoesMesDashboard();
+    await carregarResumoDoMes(mesDashboardSelecionado);
+    await carregarEvolucaoSaldoBackend();
   } catch (erro) {
     console.error('Erro ao gerar lançamentos recorrentes:', erro);
     mostrarToast(`Não foi possível gerar todos os lançamentos (${gerados}/${regras.length}).`);
@@ -1009,12 +1011,7 @@ document.getElementById('botao-simular-mes').addEventListener('click', async () 
 // existir antes da PARTE 7, que pode redesenhar o gráfico.
 let instanciaGraficoEvolucao = null;
 
-const evolucaoSaldoExemplo = {
-  // Dados fictícios anteriores: dias ['Qui', 'Sex', 'Sáb', 'Dom', 'Seg'],
-  // valores [3850, 4200, 3980, 4450, 4100].
-  dias: [],
-  valores: [0],
-};
+let evolucaoSaldo = { dias: [], valores: [] };
 
 /*
   ================================================
@@ -1030,6 +1027,86 @@ const iconesPorCategoria = {};
 const listaHoje = document.getElementById('lista-hoje');
 const API_BASE_URL = 'https://app-gestao-financeira-tcc.onrender.com/api';
 let categoriasDoMes = [];
+let sincronizacaoPreferencias = Promise.resolve();
+
+function dadosPreferenciasLocais() {
+  const lerJson = (chave, padrao) => {
+    const valor = lerDadoDoUsuario(chave);
+    return valor === null ? padrao : JSON.parse(valor);
+  };
+
+  return {
+    categorias: obterCategorias(),
+    limites_categoria: lerJson(CHAVE_LIMITES_CATEGORIA, {}),
+    orcamento_mensal: Number(lerDadoDoUsuario(CHAVE_ORCAMENTO_MENSAL) || ORCAMENTO_MENSAL_PADRAO),
+    metas: lerJson(CHAVE_METAS, []),
+    recorrentes: lerJson(CHAVE_RECORRENTES, []),
+  };
+}
+
+function gravarPreferenciasLocais(preferencias) {
+  const gravar = (chave, valor) => {
+    const chaveCompleta = chaveDeDadosDoUsuario(chave);
+    localStorage.setItem(chaveCompleta, JSON.stringify(valor));
+  };
+
+  gravar(CHAVE_CATEGORIAS, preferencias.categorias);
+  gravar(CHAVE_LIMITES_CATEGORIA, preferencias.limites_categoria);
+  gravar(CHAVE_ORCAMENTO_MENSAL, preferencias.orcamento_mensal);
+  gravar(CHAVE_METAS, preferencias.metas);
+  gravar(CHAVE_RECORRENTES, preferencias.recorrentes);
+}
+
+async function sincronizarPreferenciasBackend() {
+  if (usuarioIdAtual === null || !tokenAcessoAtual) return;
+
+  sincronizacaoPreferencias = sincronizacaoPreferencias.then(async () => {
+    const resposta = await fetch(`${API_BASE_URL}/preferencias`, {
+      method: 'PUT',
+      headers: cabecalhosAutenticados({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify(dadosPreferenciasLocais()),
+    });
+    await lerRespostaApi(resposta, 'Não foi possível salvar suas preferências.');
+  }).catch((erro) => {
+    console.error('Erro ao salvar preferências no backend:', erro);
+    mostrarToast('Não foi possível sincronizar suas configurações com o servidor.');
+  });
+
+  return sincronizacaoPreferencias;
+}
+
+async function carregarPreferenciasBackend() {
+  const resposta = await fetch(`${API_BASE_URL}/preferencias`, {
+    headers: cabecalhosAutenticados(),
+  });
+  const preferencias = await lerRespostaApi(
+    resposta,
+    'Não foi possível carregar suas configurações.',
+  );
+
+  if (preferencias.configurado) {
+    gravarPreferenciasLocais(preferencias);
+  } else {
+    const categoriasLegadas = JSON.parse(localStorage.getItem(CHAVE_CATEGORIAS) || 'null');
+    if (categoriasLegadas?.length) {
+      localStorage.setItem(
+        chaveDeDadosDoUsuario(CHAVE_CATEGORIAS),
+        JSON.stringify(categoriasLegadas),
+      );
+    }
+    const dados = dadosPreferenciasLocais();
+    const respostaSalvar = await fetch(`${API_BASE_URL}/preferencias`, {
+      method: 'PUT',
+      headers: cabecalhosAutenticados({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify(dados),
+    });
+    await lerRespostaApi(respostaSalvar, 'Não foi possível migrar suas configurações.');
+    gravarPreferenciasLocais(dados);
+  }
+
+  recalcularCategorias();
+  renderizarListaCategorias();
+}
 
 function cabecalhosAutenticados(headers = {}) {
   if (!tokenAcessoAtual) {
@@ -1045,6 +1122,7 @@ function cabecalhosAutenticados(headers = {}) {
 function construirNoLancamento(dados) {
   const item = document.createElement('li');
   item.className = 'lancamento';
+  if (dados.id !== undefined && dados.id !== null) item.setAttribute('data-id', dados.id);
   item.setAttribute('data-tipo', dados.tipo);
   // Lançamentos salvos antes desse campo existir não têm "data" —
   // nesse caso, assume hoje, só pra não sumir do filtro de mês.
@@ -1079,6 +1157,7 @@ function construirNoLancamento(dados) {
 function criarElementoLancamento(dados) {
   const item = construirNoLancamento(dados);
   listaHoje.prepend(item); // "prepend" coloca no TOPO da lista, não no final
+  return item;
 }
 
 // Junta: cria o elemento na tela e atualiza os totais.
@@ -1106,19 +1185,22 @@ function adicionarLancamento(dados) {
 
 }
 
-async function salvarTransacaoBackend(dados) {
-  const resposta = await fetch(`${API_BASE_URL}/transacoes`, {
-    method: 'POST',
-    headers: cabecalhosAutenticados({ 'Content-Type': 'application/json' }),
-    body: JSON.stringify({
-      categoria: dados.tipo === 'receita' ? 'Salário' : dados.categoria,
-      descricao: dados.descricao,
-      valor: dados.valor,
-      tipo: dados.tipo,
-      data: dados.data || obterDataDeHoje(),
-    }),
-  });
-  await lerRespostaApi(resposta, 'Não foi possível salvar o lançamento.');
+async function salvarTransacaoBackend(dados, id = null) {
+  const resposta = await fetch(
+    id === null ? `${API_BASE_URL}/transacoes` : `${API_BASE_URL}/transacoes/${id}`,
+    {
+      method: id === null ? 'POST' : 'PUT',
+      headers: cabecalhosAutenticados({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({
+        categoria: dados.tipo === 'receita' ? 'Salário' : dados.categoria,
+        descricao: dados.descricao,
+        valor: dados.valor,
+        tipo: dados.tipo,
+        data: dados.data || obterDataDeHoje(),
+      }),
+    },
+  );
+  return lerRespostaApi(resposta, 'Não foi possível salvar o lançamento.');
 }
 
 // HTML do formulário que aparece dentro do modal
@@ -1212,12 +1294,16 @@ document.getElementById('botao-novo-lancamento').addEventListener('click', () =>
 
     try {
       const lancamento = { tipo: tipoEscolhido, descricao, categoria, valor, recorrente, data };
-      await salvarTransacaoBackend(lancamento);
+      const transacaoSalva = await salvarTransacaoBackend(lancamento);
+      lancamento.id = transacaoSalva.id;
       adicionarLancamento(lancamento);
+      atualizarOpcoesMesDashboard();
+      await carregarResumoDoMes(mesDashboardSelecionado);
+      await carregarEvolucaoSaldoBackend();
       await carregarCategoriasBackend();
 
       if (recorrente) {
-        registrarRegraRecorrente({ tipo: tipoEscolhido, descricao, categoria, valor });
+        await registrarRegraRecorrente({ tipo: tipoEscolhido, descricao, categoria, valor });
       }
 
       atualizarOpcoesFiltroMes();
@@ -1320,6 +1406,7 @@ telaMovimentacoes.addEventListener('click', (evento) => {
 
   // Lê os dados ATUAIS direto do que está escrito na tela
   const dadosAtuais = {
+    id: Number(li.getAttribute('data-id')),
     tipo: li.getAttribute('data-tipo'),
     descricao: li.querySelector('.info-lancamento strong').textContent,
     categoria: li.querySelector('.categoria-lancamento').textContent,
@@ -1336,7 +1423,7 @@ telaMovimentacoes.addEventListener('click', (evento) => {
   limparErroAoDigitar(campoEditarValor);
 
   // --- Salvar alterações ---
-  document.getElementById('form-editar-lancamento').addEventListener('submit', (eventoSubmit) => {
+  document.getElementById('form-editar-lancamento').addEventListener('submit', async (eventoSubmit) => {
     eventoSubmit.preventDefault();
     limparErrosDoFormulario(eventoSubmit.target);
 
@@ -1361,7 +1448,17 @@ telaMovimentacoes.addEventListener('click', (evento) => {
 
     const botaoSalvarEdicao = eventoSubmit.target.querySelector('button[type="submit"]');
 
-    comLoadingBotao(botaoSalvarEdicao, () => {
+    comLoadingBotao(botaoSalvarEdicao, async () => {
+      const lancamentoAtualizado = {
+        id: dadosAtuais.id,
+        tipo: tipoNovo,
+        descricao: descricaoNova,
+        categoria: categoriaNova,
+        valor: valorNovo,
+        recorrente: dadosAtuais.recorrente,
+        data: dataNova,
+      };
+      await salvarTransacaoBackend(lancamentoAtualizado, dadosAtuais.id);
       const estadoAntigo = { ...estadoFinanceiro };
 
       // Primeiro desfaz o efeito do valor ANTIGO...
@@ -1380,14 +1477,7 @@ telaMovimentacoes.addEventListener('click', (evento) => {
 
       // Troca o <li> antigo por um novo, construído com os dados atualizados,
       // mantendo a mesma posição na lista (replaceWith faz isso por nós)
-      const noAtualizado = construirNoLancamento({
-        tipo: tipoNovo,
-        descricao: descricaoNova,
-        categoria: categoriaNova,
-        valor: valorNovo,
-        recorrente: dadosAtuais.recorrente,
-        data: dataNova,
-      });
+      const noAtualizado = construirNoLancamento(lancamentoAtualizado);
       li.replaceWith(noAtualizado);
 
       atualizarResumoNaTela(estadoAntigo);
@@ -1395,6 +1485,9 @@ telaMovimentacoes.addEventListener('click', (evento) => {
       renderizarOrcamentoMensal();
       atualizarOpcoesFiltroMes();
       aplicarFiltrosMovimentacoes();
+      atualizarOpcoesMesDashboard();
+      await carregarResumoDoMes(mesDashboardSelecionado);
+      await carregarEvolucaoSaldoBackend();
       fecharModal();
       mostrarToast('Lançamento atualizado! ✏️');
     });
@@ -1404,7 +1497,7 @@ telaMovimentacoes.addEventListener('click', (evento) => {
   const botaoExcluir = document.getElementById('botao-excluir-lancamento');
   let aguardandoConfirmacao = false;
 
-  botaoExcluir.addEventListener('click', () => {
+  botaoExcluir.addEventListener('click', async () => {
     if (!aguardandoConfirmacao) {
       // Primeiro clique: só avisa, ainda não exclui nada
       aguardandoConfirmacao = true;
@@ -1414,8 +1507,19 @@ telaMovimentacoes.addEventListener('click', (evento) => {
     }
 
     // Segundo clique: agora sim exclui de verdade
-    const estadoAntigo = { ...estadoFinanceiro };
+    try {
+      const resposta = await fetch(`${API_BASE_URL}/transacoes/${dadosAtuais.id}`, {
+        method: 'DELETE',
+        headers: cabecalhosAutenticados(),
+      });
+      await lerRespostaApi(resposta, 'Não foi possível excluir o lançamento.');
+    } catch (erro) {
+      console.error('Erro ao excluir transação no backend:', erro);
+      mostrarToast(erro.message || 'Não foi possível excluir o lançamento.');
+      return;
+    }
 
+    const estadoAntigo = { ...estadoFinanceiro };
     if (dadosAtuais.tipo === 'receita') {
       estadoFinanceiro.receitas -= dadosAtuais.valor;
     } else {
@@ -1428,6 +1532,14 @@ telaMovimentacoes.addEventListener('click', (evento) => {
     renderizarOrcamentoMensal();
     atualizarOpcoesFiltroMes();
     atualizarEstadoVazioLancamentos(); // pode ter sido o último item da lista
+    atualizarOpcoesMesDashboard();
+    try {
+      await carregarResumoDoMes(mesDashboardSelecionado);
+      await carregarEvolucaoSaldoBackend();
+    } catch (erro) {
+      console.error('Erro ao atualizar os dados após excluir transação:', erro);
+      mostrarToast(erro.message || 'Não foi possível atualizar os totais.');
+    }
     fecharModal();
     mostrarToast('Lançamento excluído. 🗑️');
   });
@@ -1439,10 +1551,8 @@ telaMovimentacoes.addEventListener('click', (evento) => {
   PARTE 8 - "VER TODAS" (categorias e metas) + RELATÓRIOS
   ================================================
 
-  Esses modais, por enquanto, só reorganizam dados que já existem
-  na própria tela (categorias) ou usam mais 2 metas de exemplo.
-  Quando o back-end existir, a ideia é a mesma: só troca de onde
-  vem a lista (em vez de fixo aqui no JS, viria de um fetch).
+  Categorias de gastos e relatórios são carregados da API; as metas
+  são preferências do usuário sincronizadas com o backend.
 */
 
 function criarItemCategoria(categoria, totalGastos) {
@@ -1516,7 +1626,7 @@ document.getElementById('link-ver-todas-categorias').addEventListener('click', (
   ================================================
 
   Antes só existia UMA meta, fixa no HTML. Agora as metas viram dados
-  de verdade: um array guardado no localStorage, que a pessoa pode
+  de verdade: um array guardado nas preferências da conta, que a pessoa pode
   criar, editar e excluir — igual já fizemos com lançamentos e
   lançamentos recorrentes. A primeira meta do array é a que aparece
   em destaque no card da Tela 3; todas aparecem no modal "Ver todas".
@@ -1536,8 +1646,8 @@ function obterMetas() {
   return JSON.parse(metasSalvas);
 }
 
-function salvarMetas(metas) {
-  salvarDadoDoUsuario(CHAVE_METAS, JSON.stringify(metas));
+async function salvarMetas(metas) {
+  await salvarDadoDoUsuario(CHAVE_METAS, JSON.stringify(metas));
 }
 
 const containerMetaPrincipal = document.getElementById('container-meta-principal');
@@ -1653,7 +1763,7 @@ function htmlFormularioMeta(metaExistente) {
 function abrirFormularioMeta(metaExistente) {
   abrirModal(metaExistente ? 'Editar meta' : 'Nova meta', htmlFormularioMeta(metaExistente));
 
-  document.getElementById('form-meta').addEventListener('submit', (evento) => {
+  document.getElementById('form-meta').addEventListener('submit', async (evento) => {
     evento.preventDefault();
 
     const nome = document.getElementById('campo-meta-nome').value.trim();
@@ -1668,7 +1778,7 @@ function abrirFormularioMeta(metaExistente) {
 
     const botaoSalvarMeta = evento.target.querySelector('button[type="submit"]');
 
-    comLoadingBotao(botaoSalvarMeta, () => {
+    comLoadingBotao(botaoSalvarMeta, async () => {
       const metas = obterMetas();
 
       if (metaExistente) {
@@ -1678,7 +1788,7 @@ function abrirFormularioMeta(metaExistente) {
         metas.push({ id: Date.now(), nome, icone, meta: valorMeta, atual: valorAtual });
       }
 
-      salvarMetas(metas);
+      await salvarMetas(metas);
       renderizarMetaPrincipal();
       fecharModal();
       mostrarToast(metaExistente ? 'Meta atualizada! ✏️' : 'Meta criada! 🎯');
@@ -1691,7 +1801,7 @@ function abrirFormularioMeta(metaExistente) {
   const botaoExcluirMeta = document.getElementById('botao-excluir-meta');
   let aguardandoConfirmacaoMeta = false;
 
-  botaoExcluirMeta.addEventListener('click', () => {
+  botaoExcluirMeta.addEventListener('click', async () => {
     if (!aguardandoConfirmacaoMeta) {
       aguardandoConfirmacaoMeta = true;
       botaoExcluirMeta.textContent = 'Clique de novo para confirmar';
@@ -1700,7 +1810,7 @@ function abrirFormularioMeta(metaExistente) {
     }
 
     const metas = obterMetas().filter((meta) => meta.id !== metaExistente.id);
-    salvarMetas(metas);
+    await salvarMetas(metas);
     renderizarMetaPrincipal();
     fecharModal();
     mostrarToast('Meta excluída. 🗑️');
@@ -1776,41 +1886,39 @@ function lerCorCSS(nomeVariavel) {
   Gráfico de linha mostrando como o saldo foi mudando nos últimos dias.
   Fica na Tela 1 e é redesenhado quando os valores mudam.
 
-  OBS: "instanciaGraficoEvolucao" e "evolucaoSaldoExemplo" são
-  declaradas lá em cima, ANTES da PARTE 7 — não aqui — porque
-  atualizarResumoNaTela() (que roda logo na PARTE 7, ao carregar os
-  lançamentos salvos) já chama desenharGraficoEvolucaoSaldo(), e esse
-  tipo de variável (let/const) precisa existir ANTES de ser usada,
-  mesmo que a função que a usa só seja chamada bem depois.
+  OBS: "instanciaGraficoEvolucao" e "evolucaoSaldo" são declaradas
+  antes da PARTE 7, pois atualizarResumoNaTela() pode desenhar o gráfico
+  antes de a consulta autenticada ao backend terminar.
 */
 
-// Soma (receita soma, despesa subtrai) todos os ".lancamento" que
-// estão DENTRO de uma lista específica (ex: só os de "Ontem")
-function calcularSaldoDeUmaLista(elementoLista) {
-  let total = 0;
+async function carregarEvolucaoSaldoBackend() {
+  if (usuarioIdAtual === null || !tokenAcessoAtual) return;
 
-  if (!elementoLista) return total;
+  try {
+    const resposta = await fetch(
+      `${API_BASE_URL}/relatorios/evolucao-saldo/${usuarioIdAtual}`,
+      { headers: cabecalhosAutenticados() },
+    );
+    const dados = await lerRespostaApi(
+      resposta,
+      'Não foi possível carregar a evolução do saldo.',
+    );
+    if (!Array.isArray(dados)) {
+      throw new Error('A API retornou dados inválidos para a evolução do saldo.');
+    }
 
-  elementoLista.querySelectorAll('.lancamento').forEach((item) => {
-    const tipo = item.getAttribute('data-tipo');
-    const valor = paraNumero(item.querySelector('.valor-positivo, .valor-negativo').textContent);
-    total += tipo === 'receita' ? valor : -valor;
-  });
-
-  return total;
-}
-
-// Completa o ponto inicial com os lançamentos de ontem e de hoje.
-function calcularEvolucaoSaldo() {
-  const saldoDeReferencia = evolucaoSaldoExemplo.valores[evolucaoSaldoExemplo.valores.length - 1];
-
-  const saldoOntem = saldoDeReferencia + calcularSaldoDeUmaLista(document.getElementById('lista-ontem'));
-  const saldoHoje = saldoOntem + calcularSaldoDeUmaLista(listaHoje);
-
-  return {
-    dias: [...evolucaoSaldoExemplo.dias, 'Ontem', 'Hoje'],
-    valores: [...evolucaoSaldoExemplo.valores, saldoOntem, saldoHoje],
-  };
+    evolucaoSaldo = {
+      dias: dados.map(({ data }) => {
+        const [, mes, dia] = data.split('-');
+        return `${dia}/${mes}`;
+      }),
+      valores: dados.map(({ saldo }) => Number(saldo)),
+    };
+    desenharGraficoEvolucaoSaldo();
+  } catch (erro) {
+    console.error('Erro ao carregar evolução do saldo do backend:', erro);
+    mostrarToast('Não foi possível carregar a evolução do saldo.');
+  }
 }
 
 function desenharGraficoEvolucaoSaldo() {
@@ -1833,14 +1941,12 @@ function desenharGraficoEvolucaoSaldo() {
   const corPrimaria = lerCorCSS('--cor-primaria');
   const corTextoSuave = lerCorCSS('--cor-texto-suave');
   const corBorda = lerCorCSS('--cor-borda');
-  const evolucao = calcularEvolucaoSaldo();
-
   instanciaGraficoEvolucao = new Chart(canvas, {
     type: 'line',
     data: {
-      labels: evolucao.dias,
+      labels: evolucaoSaldo.dias,
       datasets: [{
-        data: evolucao.valores,
+        data: evolucaoSaldo.valores,
         borderColor: corPrimaria,
         backgroundColor: corPrimaria + '22', // mesma cor, só que com transparência (preenche embaixo da linha)
         fill: true,
@@ -1880,6 +1986,67 @@ function obterMesSelecionado() {
   return `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}`;
 }
 
+function atualizarOpcoesMesDashboard() {
+  const mesesEncontrados = new Set(
+    [...document.querySelectorAll('.lancamento[data-data]')]
+      .map((lancamento) => lancamento.getAttribute('data-data').slice(0, 7)),
+  );
+  mesesEncontrados.add(obterMesSelecionado());
+  const mesesOrdenados = [...mesesEncontrados].sort().reverse();
+  const opcoes = mesesOrdenados
+    .map((mes) => `<option value="${mes}">${formatarMesEAno(mes)}</option>`)
+    .join('');
+
+  document.querySelectorAll('#seletor-mes-resumo, #seletor-mes-orcamento').forEach((seletor) => {
+    const valorSelecionado = mesDashboardSelecionado;
+    seletor.innerHTML = opcoes;
+    seletor.value = mesesEncontrados.has(valorSelecionado)
+      ? valorSelecionado
+      : obterMesSelecionado();
+  });
+
+  mesDashboardSelecionado = document.getElementById('seletor-mes-resumo').value;
+}
+
+async function carregarResumoDoMes(mes = mesDashboardSelecionado) {
+  if (usuarioIdAtual === null || !/^\d{4}-\d{2}$/.test(mes)) return;
+
+  const [ano, numeroMes] = mes.split('-').map(Number);
+  const resposta = await fetch(
+    `${API_BASE_URL}/resumo/${usuarioIdAtual}?ano=${ano}&mes=${numeroMes}`,
+    { headers: cabecalhosAutenticados() },
+  );
+  const resumo = await lerRespostaApi(
+    resposta,
+    'Não foi possível carregar o resumo do mês.',
+  );
+  const estadoAntigo = { ...estadoFinanceiro };
+  estadoFinanceiro = {
+    receitas: Number(resumo.total_receitas),
+    despesas: Number(resumo.total_despesas),
+    saldo: Number(resumo.saldo_atual),
+  };
+  atualizarResumoNaTela(estadoAntigo);
+  await carregarCategoriasBackend(ano, numeroMes);
+  renderizarOrcamentoPorCategoria();
+  renderizarOrcamentoMensal();
+}
+
+document.querySelectorAll('#seletor-mes-resumo, #seletor-mes-orcamento').forEach((seletor) => {
+  seletor.addEventListener('change', async () => {
+    mesDashboardSelecionado = seletor.value;
+    document.querySelectorAll('#seletor-mes-resumo, #seletor-mes-orcamento').forEach((outro) => {
+      outro.value = mesDashboardSelecionado;
+    });
+    try {
+      await carregarResumoDoMes(mesDashboardSelecionado);
+    } catch (erro) {
+      console.error('Erro ao carregar dados do mês selecionado:', erro);
+      mostrarToast(erro.message || 'Não foi possível carregar os dados deste mês.');
+    }
+  });
+});
+
 async function buscarDadosRelatorio(caminho, parametros = '') {
   if (usuarioIdAtual === null) {
     throw new Error('Entre na sua conta para consultar os relatórios.');
@@ -1896,11 +2063,13 @@ async function buscarDadosRelatorio(caminho, parametros = '') {
   return dados;
 }
 
-async function carregarCategoriasBackend() {
+async function carregarCategoriasBackend(
+  ano = Number(mesDashboardSelecionado.slice(0, 4)),
+  mes = Number(mesDashboardSelecionado.slice(5, 7)),
+) {
   if (usuarioIdAtual === null) return;
 
-  const agora = new Date();
-  const parametros = `?ano=${agora.getFullYear()}&mes=${agora.getMonth() + 1}`;
+  const parametros = `?ano=${ano}&mes=${mes}`;
   try {
     const categorias = await buscarDadosRelatorio('categorias', parametros);
     categoriasDoMes = categorias.map((categoria) => ({
@@ -2129,22 +2298,9 @@ function exportarLancamentosCSV() {
 
 /*
   ================================================
-  PARTE 9 - SELETOR DE MÊS (aviso de que ainda é mockado)
+  PARTE 9 - RELATÓRIOS E FILTRO DE MÊS
   ================================================
-
-  Como só temos dados de Setembro por enquanto, trocar o mês só
-  mostra um aviso. Quando vier do back-end, aqui entraria um
-  fetch('sua-api/resumo?mes=' + mesEscolhido) puxando os números
-  daquele mês específico.
 */
-
-document.querySelectorAll('.seletor-mes').forEach((seletor) => {
-  seletor.addEventListener('change', () => {
-    mostrarToast('Dados de outros meses virão do back-end em breve 🚧');
-    seletor.value = 'Setembro'; // volta pro mês que realmente tem dado
-  });
-});
-
 
 /*
   ================================================
@@ -2185,22 +2341,24 @@ const avatarUsuario = document.getElementById('avatar-usuario');
 /*
   Deixa um botão de formulário "carregando" (ícone girando + travado
   pra não clicar de novo) por um tempinho antes de executar a ação de
-  verdade. É só efeito visual — como ainda não tem back-end, não tem
-  nada pra "esperar" de verdade — mas simula a sensação de um app
-  processando a informação, em vez da ação acontecer instantânea
-  demais (o que parece "bugado"/pouco real).
+  verdade. O indicador permanece ativo enquanto a operação remota
+  está sendo processada.
 */
-function comLoadingBotao(botao, acao, duracaoMs = 600) {
+async function comLoadingBotao(botao, acao) {
   const textoOriginal = botao.innerHTML;
 
   botao.disabled = true;
   botao.innerHTML = '<i class="fa-solid fa-spinner icone-carregando"></i>';
 
-  setTimeout(() => {
-    acao();
+  try {
+    await acao();
+  } catch (erro) {
+    console.error('Não foi possível concluir a operação:', erro);
+    mostrarToast(erro.message || 'Não foi possível concluir a operação.');
+  } finally {
     botao.disabled = false;
     botao.innerHTML = textoOriginal;
-  }, duracaoMs);
+  }
 }
 
 /*
@@ -2244,6 +2402,11 @@ function entrarNoApp(nome, email) {
   telaLogin.classList.add('tela-auth-escondida');
   textoSaudacao.textContent = `Olá, ${nome}!`;
   textoUsuarioLogado.textContent = email ? `${nome} (${email})` : nome;
+  document.getElementById('data-saldo-hoje').textContent = `Hoje, ${new Intl.DateTimeFormat('pt-BR', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  }).format(new Date())}`;
 
   // Avatar = primeira letra do nome, maiúscula (se por algum motivo
   // vier vazio, usa "?" pra nunca deixar o círculo sem nada dentro)
@@ -2253,6 +2416,8 @@ function entrarNoApp(nome, email) {
 function limparDadosDaContaAtual() {
   listaHoje.innerHTML = '';
   document.getElementById('lista-ontem').innerHTML = '';
+  evolucaoSaldo = { dias: [], valores: [] };
+  desenharGraficoEvolucaoSaldo();
   categoriasDoMes = [];
   renderizarCategoriasGastos([], document.querySelector('.lista-categorias'));
 
@@ -2283,6 +2448,12 @@ async function ativarUsuario(usuario, mostrarBoasVindas = false) {
   };
   localStorage.setItem(CHAVE_USUARIO, JSON.stringify(perfil));
 
+  try {
+    await carregarPreferenciasBackend();
+  } catch (erro) {
+    console.error('Erro ao carregar as preferências do backend:', erro);
+    mostrarToast('Não foi possível sincronizar suas configurações. Os demais dados da conta serão carregados.');
+  }
   limparDadosDaContaAtual();
   entrarNoApp(perfil.nome, perfil.email);
   await carregarDadosBackend(idUsuario);
@@ -2292,6 +2463,7 @@ async function ativarUsuario(usuario, mostrarBoasVindas = false) {
 }
 
 async function lerRespostaApi(resposta, mensagemPadrao) {
+  if (resposta.status === 204) return null;
   const dados = await resposta.json();
   if (!resposta.ok) {
     throw new Error(typeof dados.detail === 'string' ? dados.detail : mensagemPadrao);
@@ -2828,34 +3000,27 @@ async function carregarDadosBackend(idUsuario) {
         categoria: transacao.categoria,
         valor: Number(transacao.valor),
         data: transacao.data,
+        id: transacao.id,
         recorrente: false,
       });
     });
   } catch (erro) {
-    console.error('Erro ao carregar transações do FastAPI local:', erro);
+    console.error('Erro ao carregar transações do backend:', erro);
     mostrarToast('Não foi possível carregar os lançamentos da conta.');
   }
 
+  atualizarOpcoesMesDashboard();
+  mesDashboardSelecionado = obterMesSelecionado();
+  document.querySelectorAll('#seletor-mes-resumo, #seletor-mes-orcamento').forEach((seletor) => {
+    seletor.value = mesDashboardSelecionado;
+  });
   try {
-    const respostaResumo = await fetch(`${API_BASE_URL}/resumo/${idUsuario}`, {
-      headers: cabecalhosAutenticados(),
-    });
-    if (!respostaResumo.ok) {
-      throw new Error(`A API de resumo respondeu com HTTP ${respostaResumo.status}.`);
-    }
-
-    const resumo = await respostaResumo.json();
-    const estadoAntigo = { ...estadoFinanceiro };
-    estadoFinanceiro.receitas = Number(resumo.total_receitas);
-    estadoFinanceiro.despesas = Number(resumo.total_despesas);
-    estadoFinanceiro.saldo = Number(resumo.saldo_atual);
-    atualizarResumoNaTela(estadoAntigo);
+    await carregarResumoDoMes(mesDashboardSelecionado);
   } catch (erro) {
-    console.error('Erro ao carregar o resumo do FastAPI local:', erro);
-    mostrarToast('Não foi possível carregar o resumo financeiro.');
+    console.error('Erro ao carregar o resumo mensal do backend:', erro);
+    mostrarToast(erro.message || 'Não foi possível carregar o resumo financeiro.');
   }
-
-  await carregarCategoriasBackend();
+  await carregarEvolucaoSaldoBackend();
   renderizarOrcamentoPorCategoria();
   renderizarOrcamentoMensal();
   renderizarRecorrentes();

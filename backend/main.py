@@ -17,7 +17,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 import jwt
 from pydantic import BaseModel, EmailStr, Field
 from psycopg2 import IntegrityError
-from psycopg2.extras import RealDictCursor
+from psycopg2.extras import Json, RealDictCursor
 import requests
 
 from database import get_db
@@ -70,6 +70,36 @@ class TransacaoCreate(BaseModel):
     valor: Decimal = Field(gt=0, max_digits=10, decimal_places=2)
     tipo: Literal["receita", "despesa"]
     data: date = Field(default_factory=date.today)
+
+
+class CategoriaPreferencia(BaseModel):
+    nome: str = Field(min_length=1, max_length=50)
+    icone: str = Field(min_length=1, max_length=50)
+    cor: str = Field(min_length=1, max_length=50)
+
+
+class MetaFinanceira(BaseModel):
+    id: int = Field(gt=0)
+    nome: str = Field(min_length=1, max_length=100)
+    icone: str = Field(min_length=1, max_length=50)
+    meta: Decimal = Field(gt=0, max_digits=10, decimal_places=2)
+    atual: Decimal = Field(ge=0, max_digits=10, decimal_places=2)
+
+
+class LancamentoRecorrente(BaseModel):
+    id: int = Field(gt=0)
+    tipo: Literal["receita", "despesa"]
+    descricao: str = Field(min_length=1, max_length=150)
+    categoria: str = Field(min_length=1, max_length=50)
+    valor: Decimal = Field(gt=0, max_digits=10, decimal_places=2)
+
+
+class PreferenciasUsuario(BaseModel):
+    categorias: list[CategoriaPreferencia] = Field(default_factory=list)
+    limites_categoria: dict[str, Decimal] = Field(default_factory=dict)
+    orcamento_mensal: Decimal = Field(default=Decimal("5000"), ge=0, max_digits=10, decimal_places=2)
+    metas: list[MetaFinanceira] = Field(default_factory=list)
+    recorrentes: list[LancamentoRecorrente] = Field(default_factory=list)
 
 
 def _obter_segredo_autenticacao() -> bytes:
@@ -177,6 +207,30 @@ def _garantir_tabela_tokens_recuperacao(cursor: RealDictCursor) -> None:
     )
     cursor.execute(
         """
+        ALTER TABLE tokens_recuperacao_senha
+        ADD COLUMN IF NOT EXISTS usado_em TIMESTAMPTZ
+        """
+    )
+    cursor.execute(
+        """
+        SELECT format_type(atttypid, atttypmod) AS tipo
+        FROM pg_attribute
+        WHERE attrelid = to_regclass('tokens_recuperacao_senha')
+          AND attname = 'usado'
+          AND NOT attisdropped
+        """
+    )
+    coluna_legada_usado = cursor.fetchone()
+    if coluna_legada_usado and coluna_legada_usado["tipo"] == "boolean":
+        cursor.execute(
+            """
+            UPDATE tokens_recuperacao_senha
+            SET usado_em = NOW()
+            WHERE usado IS TRUE AND usado_em IS NULL
+            """
+        )
+    cursor.execute(
+        """
         CREATE INDEX IF NOT EXISTS idx_tokens_recuperacao_usuario_criado
         ON tokens_recuperacao_senha (usuario_id, criado_em DESC)
         """
@@ -276,6 +330,44 @@ def _enviar_email_recuperacao(email: str, token: str) -> None:
 MENSAGEM_RECUPERACAO = (
     "Se o e-mail estiver cadastrado, enviaremos instruções para recuperar a senha."
 )
+
+
+def _garantir_tabela_preferencias_usuario(cursor: RealDictCursor) -> None:
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS preferencias_usuario (
+            usuario_id INT PRIMARY KEY REFERENCES usuarios(id) ON DELETE CASCADE,
+            dados JSONB NOT NULL DEFAULT '{}'::jsonb,
+            atualizado_em TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+        """
+    )
+
+
+def _obter_categoria_id(cursor: RealDictCursor, nome: str, tipo: str) -> int:
+    cursor.execute(
+        """
+        SELECT id
+        FROM categorias
+        WHERE nome = %s AND tipo = %s
+        ORDER BY id
+        LIMIT 1
+        """,
+        (nome, tipo),
+    )
+    categoria = cursor.fetchone()
+    if categoria:
+        return categoria["id"]
+
+    cursor.execute(
+        """
+        INSERT INTO categorias (nome, tipo)
+        VALUES (%s, %s)
+        RETURNING id
+        """,
+        (nome, tipo),
+    )
+    return cursor.fetchone()["id"]
 
 
 @app.post("/api/auth/cadastro")
@@ -479,6 +571,51 @@ def atualizar_perfil(
         ) from exc
 
 
+@app.get("/api/preferencias")
+def obter_preferencias_usuario(
+    usuario_id: int = Depends(obter_usuario_autenticado),
+):
+    with closing(get_db()) as conn:
+        with conn.cursor() as cursor:
+            _garantir_tabela_preferencias_usuario(cursor)
+            cursor.execute(
+                "SELECT dados FROM preferencias_usuario WHERE usuario_id = %s",
+                (usuario_id,),
+            )
+            registro = cursor.fetchone()
+        conn.commit()
+
+    configurado = registro is not None
+    dados = registro["dados"] if configurado else {}
+    preferencias = PreferenciasUsuario.model_validate(dados)
+    return {
+        "configurado": configurado,
+        **preferencias.model_dump(mode="json"),
+    }
+
+
+@app.put("/api/preferencias")
+def salvar_preferencias_usuario(
+    preferencias: PreferenciasUsuario,
+    usuario_id: int = Depends(obter_usuario_autenticado),
+):
+    with closing(get_db()) as conn:
+        with conn.cursor() as cursor:
+            _garantir_tabela_preferencias_usuario(cursor)
+            cursor.execute(
+                """
+                INSERT INTO preferencias_usuario (usuario_id, dados, atualizado_em)
+                VALUES (%s, %s, NOW())
+                ON CONFLICT (usuario_id)
+                DO UPDATE SET dados = EXCLUDED.dados, atualizado_em = NOW()
+                """,
+                (usuario_id, Json(preferencias.model_dump(mode="json"))),
+            )
+        conn.commit()
+
+    return preferencias.model_dump(mode="json")
+
+
 @app.get("/api/transacoes/{usuario_id}")
 def listar_transacoes(usuario_id: int = Depends(exigir_usuario_da_rota)):
     with closing(get_db()) as conn:
@@ -486,7 +623,8 @@ def listar_transacoes(usuario_id: int = Depends(exigir_usuario_da_rota)):
             cursor.execute(
                 """
                 SELECT t.id, t.descricao, t.valor, t.data, t.tipo,
-                       c.nome AS categoria, c.icone, c.cor
+                       CASE WHEN t.tipo = 'receita' THEN 'Receita' ELSE c.nome END AS categoria,
+                       c.icone, c.cor
                 FROM transacoes t
                 LEFT JOIN categorias c ON t.categoria_id = c.id
                 WHERE t.usuario_id = %s
@@ -507,29 +645,9 @@ def criar_transacao(
             with conn.cursor() as cursor:
                 categoria_id = transacao.categoria_id
                 if transacao.categoria:
-                    cursor.execute(
-                        """
-                        SELECT id
-                        FROM categorias
-                        WHERE nome = %s AND tipo = %s
-                        ORDER BY id
-                        LIMIT 1
-                        """,
-                        (transacao.categoria, transacao.tipo),
+                    categoria_id = _obter_categoria_id(
+                        cursor, transacao.categoria, transacao.tipo
                     )
-                    categoria = cursor.fetchone()
-                    if categoria:
-                        categoria_id = categoria["id"]
-                    else:
-                        cursor.execute(
-                            """
-                            INSERT INTO categorias (nome, tipo)
-                            VALUES (%s, %s)
-                            RETURNING id
-                            """,
-                            (transacao.categoria, transacao.tipo),
-                        )
-                        categoria_id = cursor.fetchone()["id"]
                 elif categoria_id is None:
                     raise HTTPException(
                         status_code=400,
@@ -561,12 +679,90 @@ def criar_transacao(
         ) from exc
 
 
-@app.get("/api/resumo/{usuario_id}")
-def resumo_dashboard(usuario_id: int = Depends(exigir_usuario_da_rota)):
+@app.put("/api/transacoes/{transacao_id}")
+def atualizar_transacao(
+    transacao: TransacaoCreate,
+    transacao_id: int = Path(gt=0),
+    usuario_id: int = Depends(obter_usuario_autenticado),
+):
+    nome_categoria = "Salário" if transacao.tipo == "receita" else transacao.categoria
+    if not nome_categoria:
+        raise HTTPException(status_code=400, detail="Informe uma categoria válida.")
+
+    try:
+        with closing(get_db()) as conn:
+            with conn.cursor() as cursor:
+                categoria_id = _obter_categoria_id(
+                    cursor, nome_categoria, transacao.tipo
+                )
+                cursor.execute(
+                    """
+                    UPDATE transacoes
+                    SET categoria_id = %s, descricao = %s, valor = %s,
+                        data = %s, tipo = %s
+                    WHERE id = %s AND usuario_id = %s
+                    RETURNING id
+                    """,
+                    (
+                        categoria_id,
+                        transacao.descricao,
+                        transacao.valor,
+                        transacao.data,
+                        transacao.tipo,
+                        transacao_id,
+                        usuario_id,
+                    ),
+                )
+                atualizado = cursor.fetchone()
+            conn.commit()
+    except IntegrityError as exc:
+        raise HTTPException(
+            status_code=400, detail="Usuário ou categoria inválidos para a transação."
+        ) from exc
+
+    if not atualizado:
+        raise HTTPException(status_code=404, detail="Lançamento não encontrado.")
+    return {"mensagem": "Lançamento atualizado.", "id": atualizado["id"]}
+
+
+@app.delete("/api/transacoes/{transacao_id}", status_code=204)
+def excluir_transacao(
+    transacao_id: int = Path(gt=0),
+    usuario_id: int = Depends(obter_usuario_autenticado),
+):
     with closing(get_db()) as conn:
         with conn.cursor() as cursor:
             cursor.execute(
-                """
+                "DELETE FROM transacoes WHERE id = %s AND usuario_id = %s RETURNING id",
+                (transacao_id, usuario_id),
+            )
+            excluida = cursor.fetchone()
+        conn.commit()
+
+    if not excluida:
+        raise HTTPException(status_code=404, detail="Lançamento não encontrado.")
+
+
+@app.get("/api/resumo/{usuario_id}")
+def resumo_dashboard(
+    usuario_id: int = Depends(exigir_usuario_da_rota),
+    ano: int | None = Query(default=None, ge=2000, le=9999),
+    mes: int | None = Query(default=None, ge=1, le=12),
+):
+    if (ano is None) != (mes is None):
+        raise HTTPException(
+            status_code=400, detail="Informe ano e mês juntos para filtrar o resumo."
+        )
+    inicio_mes = date(ano, mes, 1) if ano is not None and mes is not None else None
+    proximo_mes = (
+        (inicio_mes.replace(day=28) + timedelta(days=4)).replace(day=1)
+        if inicio_mes is not None
+        else None
+    )
+
+    with closing(get_db()) as conn:
+        with conn.cursor() as cursor:
+            consulta = """
                 SELECT
                     COALESCE(SUM(CASE WHEN tipo = 'receita' THEN valor ELSE 0 END), 0)
                         AS total_receitas,
@@ -574,9 +770,12 @@ def resumo_dashboard(usuario_id: int = Depends(exigir_usuario_da_rota)):
                         AS total_despesas
                 FROM transacoes
                 WHERE usuario_id = %s
-                """,
-                (usuario_id,),
-            )
+            """
+            parametros: tuple = (usuario_id,)
+            if inicio_mes is not None and proximo_mes is not None:
+                consulta += " AND data >= %s AND data < %s"
+                parametros = (usuario_id, inicio_mes, proximo_mes)
+            cursor.execute(consulta, parametros)
             totais = cursor.fetchone()
 
     receitas = totais["total_receitas"]
@@ -586,6 +785,61 @@ def resumo_dashboard(usuario_id: int = Depends(exigir_usuario_da_rota)):
         "total_receitas": float(receitas),
         "total_despesas": float(despesas),
     }
+
+
+@app.get("/api/relatorios/evolucao-saldo/{usuario_id}")
+def relatorio_evolucao_saldo(
+    usuario_id: int = Depends(exigir_usuario_da_rota),
+):
+    with closing(get_db()) as conn:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                WITH dias AS (
+                    SELECT generate_series(
+                        CURRENT_DATE - INTERVAL '6 days',
+                        CURRENT_DATE,
+                        INTERVAL '1 day'
+                    )::date AS data
+                ),
+                saldo_anterior AS (
+                    SELECT COALESCE(
+                        SUM(CASE WHEN tipo = 'receita' THEN valor ELSE -valor END),
+                        0
+                    ) AS saldo
+                    FROM transacoes
+                    WHERE usuario_id = %s
+                      AND data < CURRENT_DATE - INTERVAL '6 days'
+                ),
+                movimentos AS (
+                    SELECT
+                        data,
+                        SUM(CASE WHEN tipo = 'receita' THEN valor ELSE -valor END)
+                            AS movimento
+                    FROM transacoes
+                    WHERE usuario_id = %s
+                      AND data >= CURRENT_DATE - INTERVAL '6 days'
+                      AND data <= CURRENT_DATE
+                    GROUP BY data
+                )
+                SELECT
+                    dias.data,
+                    saldo_anterior.saldo
+                        + SUM(COALESCE(movimentos.movimento, 0))
+                            OVER (ORDER BY dias.data) AS saldo
+                FROM dias
+                CROSS JOIN saldo_anterior
+                LEFT JOIN movimentos ON movimentos.data = dias.data
+                ORDER BY dias.data
+                """,
+                (usuario_id, usuario_id),
+            )
+            dias = cursor.fetchall()
+
+    return [
+        {"data": dia["data"].isoformat(), "saldo": float(dia["saldo"])}
+        for dia in dias
+    ]
 
 
 @app.get("/api/relatorios/mensal/{usuario_id}")

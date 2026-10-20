@@ -38,3 +38,21 @@ A aplicação separa de forma estrita as responsabilidades entre interface, lóg
        │   Banco de Dados PostgreSQL             │
        │         [Hospedado no Neon.tech]        │
        └─────────────────────────────────────────┘
+```
+
+## Persistência dos dados
+
+Transações, totais e relatórios são consultados no backend e persistidos no
+Neon. Edição e exclusão de transações também atualizam o banco. Metas,
+categorias personalizadas, limites por categoria, orçamento mensal e regras
+recorrentes são sincronizados por conta na tabela `preferencias_usuario`
+(JSONB). O backend cria essa tabela com `IF NOT EXISTS` na primeira consulta;
+o usuário PostgreSQL configurado em `DATABASE_URL` precisa poder criar tabelas.
+
+A tabela de recuperação de senha é compatibilizada automaticamente: se ela já
+existir com a coluna legada `usado` (boolean), o backend adiciona `usado_em` e
+preserva como usados os tokens que já estavam marcados dessa forma.
+
+As preferências já existentes no navegador são migradas para a conta na
+primeira autenticação. O botão de recorrências gera os próximos lançamentos
+sob demanda; não existe execução automática mensal no servidor.
