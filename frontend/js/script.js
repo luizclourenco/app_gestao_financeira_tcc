@@ -1007,11 +1007,8 @@ document.getElementById('botao-simular-mes').addEventListener('click', async () 
 });
 
 
-// Guarda a instância do gráfico e um ponto inicial neutro; ambos precisam
-// existir antes da PARTE 7, que pode redesenhar o gráfico.
-let instanciaGraficoEvolucao = null;
-
 let evolucaoSaldo = { dias: [], valores: [] };
+let erroEvolucaoSaldo = null;
 
 /*
   ================================================
@@ -1903,77 +1900,137 @@ async function carregarEvolucaoSaldoBackend() {
       resposta,
       'Não foi possível carregar a evolução do saldo.',
     );
-    if (!Array.isArray(dados)) {
+    if (!Array.isArray(dados) || dados.length > 7) {
       throw new Error('A API retornou dados inválidos para a evolução do saldo.');
     }
 
     evolucaoSaldo = {
-      dias: dados.map(({ data }) => {
+      dias: dados.map(({ data, saldo }) => {
+        if (typeof data !== 'string' || !Number.isFinite(Number(saldo))) {
+          throw new Error('A API retornou dados inválidos para a evolução do saldo.');
+        }
         const [, mes, dia] = data.split('-');
         return `${dia}/${mes}`;
       }),
       valores: dados.map(({ saldo }) => Number(saldo)),
     };
+    erroEvolucaoSaldo = null;
     desenharGraficoEvolucaoSaldo();
   } catch (erro) {
     console.error('Erro ao carregar evolução do saldo do backend:', erro);
+    evolucaoSaldo = { dias: [], valores: [] };
+    erroEvolucaoSaldo = 'Não foi possível carregar os dados.';
+    desenharGraficoEvolucaoSaldo();
     mostrarToast('Não foi possível carregar a evolução do saldo.');
   }
 }
 
 function desenharGraficoEvolucaoSaldo() {
-  const canvas = document.getElementById('grafico-evolucao-saldo');
-  if (!canvas) return;
+  const grafico = document.getElementById('grafico-evolucao-saldo');
+  if (!grafico) return;
+  grafico.replaceChildren();
 
-  // Se o Chart.js não carregou (ex: sem internet, CDN bloqueado por
-  // firewall/adblock), "Chart" não existe. Em vez de travar o resto
-  // do app inteiro com um erro, a gente só desiste de desenhar esse
-  // gráfico específico e segue a vida.
-  if (typeof Chart === 'undefined') {
-    console.warn('Chart.js não carregou — gráfico de evolução não será exibido.');
-    return;
-  }
-
-  if (instanciaGraficoEvolucao) {
-    instanciaGraficoEvolucao.destroy();
-  }
-
+  const criarElemento = (nome, atributos = {}) => {
+    const elemento = document.createElementNS('http://www.w3.org/2000/svg', nome);
+    Object.entries(atributos).forEach(([atributo, valor]) => {
+      elemento.setAttribute(atributo, valor);
+    });
+    return elemento;
+  };
   const corPrimaria = lerCorCSS('--cor-primaria');
   const corTextoSuave = lerCorCSS('--cor-texto-suave');
   const corBorda = lerCorCSS('--cor-borda');
-  instanciaGraficoEvolucao = new Chart(canvas, {
-    type: 'line',
-    data: {
-      labels: evolucaoSaldo.dias,
-      datasets: [{
-        data: evolucaoSaldo.valores,
-        borderColor: corPrimaria,
-        backgroundColor: corPrimaria + '22', // mesma cor, só que com transparência (preenche embaixo da linha)
-        fill: true,
-        tension: 0.35, // deixa a linha curva, em vez de quebrada/angulosa
-        pointRadius: 3,
-        pointBackgroundColor: corPrimaria,
-      }],
-    },
-    options: {
-      plugins: {
-        legend: { display: false }, // só uma linha, não precisa de legenda
-      },
-      scales: {
-        x: {
-          ticks: { color: corTextoSuave, font: { size: 11 } },
-          grid: { display: false },
-        },
-        y: {
-          ticks: {
-            color: corTextoSuave,
-            font: { size: 11 },
-            callback: (valor) => 'R$ ' + valor, // mostra "R$ 4000" em vez de só "4000"
-          },
-          grid: { color: corBorda },
-        },
-      },
-    },
+  const largura = 360;
+  const topo = 12;
+  const base = 138;
+  const margemHorizontal = 12;
+  const valores = evolucaoSaldo.valores;
+
+  if (valores.length === 0 || valores.length !== evolucaoSaldo.dias.length) {
+    const mensagem = erroEvolucaoSaldo
+      || (usuarioIdAtual === null
+        ? 'Entre na conta para ver sua evolução.'
+        : 'Ainda não há dados dos últimos 7 dias.');
+    const texto = criarElemento('text', {
+      x: largura / 2,
+      y: 80,
+      fill: corTextoSuave,
+      'font-size': 13,
+      'text-anchor': 'middle',
+    });
+    texto.textContent = mensagem;
+    grafico.append(texto);
+    return;
+  }
+
+  let menorValor = Math.min(...valores);
+  let maiorValor = Math.max(...valores);
+  if (menorValor === maiorValor) {
+    const margem = Math.max(Math.abs(menorValor) * 0.05, 1);
+    menorValor -= margem;
+    maiorValor += margem;
+  }
+  const margemVertical = (maiorValor - menorValor) * 0.1;
+  menorValor -= margemVertical;
+  maiorValor += margemVertical;
+
+  const pontos = valores.map((valor, indice) => ({
+    x: valores.length === 1
+      ? largura / 2
+      : margemHorizontal
+        + (indice * (largura - margemHorizontal * 2)) / (valores.length - 1),
+    y: base - ((valor - menorValor) / (maiorValor - menorValor)) * (base - topo),
+  }));
+
+  [0, 0.5, 1].forEach((fracao) => {
+    const y = topo + fracao * (base - topo);
+    grafico.append(criarElemento('line', {
+      x1: margemHorizontal,
+      y1: y,
+      x2: largura - margemHorizontal,
+      y2: y,
+      stroke: corBorda,
+      'stroke-width': 1,
+    }));
+  });
+
+  const area = criarElemento('polygon', {
+    points: `${pontos[0].x},${base} ${pontos.map(({ x, y }) => `${x},${y}`).join(' ')} ${pontos[pontos.length - 1].x},${base}`,
+    fill: corPrimaria,
+    'fill-opacity': 0.12,
+  });
+  grafico.append(area);
+
+  grafico.append(criarElemento('polyline', {
+    points: pontos.map(({ x, y }) => `${x},${y}`).join(' '),
+    fill: 'none',
+    stroke: corPrimaria,
+    'stroke-width': 3,
+    'stroke-linecap': 'round',
+    'stroke-linejoin': 'round',
+  }));
+
+  pontos.forEach(({ x, y }, indice) => {
+    const ponto = criarElemento('circle', {
+      cx: x,
+      cy: y,
+      r: 3,
+      fill: corPrimaria,
+    });
+    const detalhe = criarElemento('title');
+    detalhe.textContent = `${evolucaoSaldo.dias[indice]}: ${formatarMoeda(valores[indice])}`;
+    ponto.append(detalhe);
+    grafico.append(ponto);
+
+    const rotulo = criarElemento('text', {
+      x,
+      y: 160,
+      fill: corTextoSuave,
+      'font-size': 10,
+      'text-anchor': 'middle',
+    });
+    rotulo.textContent = evolucaoSaldo.dias[indice];
+    grafico.append(rotulo);
   });
 }
 
