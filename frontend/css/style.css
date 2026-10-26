@@ -255,7 +255,11 @@ body {
 
 @media (min-width: 441px) {
   .tela {
-    padding-top: 40px; /* espaço extra pra não ficar atrás da Dynamic Island */
+    /* A "Dynamic Island" (::before do .app-container) vai de 14px até
+       44px do topo — 56px de folga garante que o conteúdo (ex: a
+       saudação "Olá, Fulano!") comece bem abaixo dela, sem quase
+       encostar. */
+    padding-top: 56px;
   }
 }
 
