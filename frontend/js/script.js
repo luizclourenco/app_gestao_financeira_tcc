@@ -3029,8 +3029,9 @@ function aplicarTema(tema) {
 }
 
 // Ao carregar a página, usa o tema salvo antes (se existir).
-// Se a pessoa nunca escolheu, começa no "claro" por padrão.
-const temaSalvoAnteriormente = localStorage.getItem(CHAVE_TEMA) || 'claro';
+// Se a pessoa nunca escolheu, começa no "escuro" por padrão — é a
+// identidade visual principal do app agora.
+const temaSalvoAnteriormente = localStorage.getItem(CHAVE_TEMA) || 'escuro';
 aplicarTema(temaSalvoAnteriormente);
 
 botaoTema.addEventListener('click', () => {

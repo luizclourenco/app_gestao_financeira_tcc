@@ -24,6 +24,12 @@
   --cor-negativa: #B5473A;         /* terracota avermelhado - despesas */
   --cor-negativa-fundo: #F8E9E6;
   --cor-texto-inverso: #FFFFFF;    /* texto branco fixo, para usar em cima de fundo colorido */
+  /* Brilho do skeleton de carregamento: branco translúcido em vez de
+     uma cor sólida, pra sempre clarear o que tiver embaixo (borda,
+     fundo) pela MESMA proporção, em qualquer tema/esquema — sem
+     precisar de um valor por combinação. No escuro fica bem mais
+     sutil (senão vira um clarão), no claro mais forte. */
+  --cor-skeleton-brilho: rgba(255, 255, 255, 0.65);
   /* Fundo da "mesa" atrás do celular: sempre branco, não importa o
      esquema (vinho/azul) nem o tema (claro/escuro) — é só o cenário
      ao redor do aparelho, não faz parte da identidade visual do app */
@@ -54,25 +60,21 @@ html[data-esquema="vinho"] {
   --cor-borda: #EBD9D7;
 }
 
-/* ESQUEMA "VINHO" (escuro) */
+/* ESQUEMA "VINHO" (escuro) — é o tema PADRÃO do app agora (ver PARTE
+   10 do script.js). Em vez de ser só uma inversão do tema claro,
+   o fundo vai bem mais pro preto (quase preto, só com uma tintura
+   de vinho) pra parecer produto fintech de verdade, não "modo
+   escuro de navegador". A cor primária fica mais saturada/viva pra
+   ainda ter contraste forte contra esse preto mais profundo. */
 html[data-esquema="vinho"][data-tema="escuro"] {
-  --cor-primaria: #A6465A;
-  /* No modo claro, o gradiente do card de saldo vai de #7A3042 até
-     #4A1D28 (escurece). No escuro, antes, usava esse MESMO #4A1D28
-     como ponta escura — só que como o fundo já é escuro, o card
-     acabava parecendo "a mesma cor" nos dois temas. Agora a ponta
-     escura também muda: no escuro ela fica mais clara/viva (usa o
-     tom que era a cor "clara" no tema claro), então o card inteiro
-     fica visivelmente diferente entre claro e escuro. */
+  --cor-primaria: #BD5770;
   --cor-primaria-escura: #7A3042;
-  --cor-primaria-clara: #3A1E24;
-  --cor-texto: #F0EAE8;
-  --cor-texto-suave: #BBA4A8;
-  /* Fundo escuro puxado pro vinho/borgonha, não um cinza-marrom
-     neutro que ficaria parecido com o fundo escuro do esquema azul */
-  --cor-fundo: #200F14;
-  --cor-branco: #2E161C;
-  --cor-borda: #45232B;
+  --cor-primaria-clara: #2A161B;
+  --cor-texto: #F5ECEA;
+  --cor-texto-suave: #AD9094;
+  --cor-fundo: #0D0709;
+  --cor-branco: #1C1215;
+  --cor-borda: #332025;
 }
 
 /*
@@ -93,21 +95,19 @@ html[data-esquema="azul"] {
   --cor-borda: #D3E0EF;
 }
 
-/* ESQUEMA "AZUL" (escuro) */
+/* ESQUEMA "AZUL" (escuro) — mesma ideia do vinho escuro: fundo bem
+   mais perto do preto (só uma tintura de azul-marinho), card
+   "flutuando" numa superfície elevada em vez de repetir o mesmo
+   azul do fundo. */
 html[data-esquema="azul"][data-tema="escuro"] {
-  --cor-primaria: #4D7AB8;
-  /* Mesma lógica do vinho escuro: a ponta escura do gradiente do
-     card de saldo usa o tom que era a cor "primária" no tema claro,
-     em vez de repetir o mesmo #152A47 escuro dos dois temas. */
+  --cor-primaria: #5E8FD6;
   --cor-primaria-escura: #2A4D7A;
-  --cor-primaria-clara: #1C2C3E;
-  --cor-texto: #EBEEF2;
-  --cor-texto-suave: #93A6BE;
-  /* Fundo escuro puxado pro azul-marinho, não um cinza/preto neutro
-     que ficaria parecido com o fundo escuro do esquema vinho */
-  --cor-fundo: #0A121F;
-  --cor-branco: #142A47;
-  --cor-borda: #223A57;
+  --cor-primaria-clara: #15202E;
+  --cor-texto: #ECF1F7;
+  --cor-texto-suave: #8FA3BC;
+  --cor-fundo: #05080D;
+  --cor-branco: #101B29;
+  --cor-borda: #1D2C3E;
 }
 
 /*
@@ -121,6 +121,7 @@ html[data-tema="escuro"] {
   --cor-acento-fundo: #3A2F18;
   --cor-positiva-fundo: #163024;
   --cor-negativa-fundo: #3A1E18;
+  --cor-skeleton-brilho: rgba(255, 255, 255, 0.1);
 }
 
 /* Reset básico: tira margens e paddings padrão do navegador */
@@ -255,11 +256,7 @@ body {
 
 @media (min-width: 441px) {
   .tela {
-    /* A "Dynamic Island" (::before do .app-container) vai de 14px até
-       44px do topo — 56px de folga garante que o conteúdo (ex: a
-       saudação "Olá, Fulano!") comece bem abaixo dela, sem quase
-       encostar. */
-    padding-top: 56px;
+    padding-top: 40px; /* espaço extra pra não ficar atrás da Dynamic Island */
   }
 }
 
@@ -385,6 +382,14 @@ body {
 .card-saldo {
   background: linear-gradient(135deg, var(--cor-primaria), var(--cor-primaria-escura));
   color: var(--cor-texto-inverso);
+
+  /* Esse é o card mais importante da tela — em vez de repetir a
+     mesma sombra suave e genérica de todo card, ele ganha uma
+     elevação própria, tingida pela cor do esquema, pra pesar mais
+     visualmente que os cards secundários ao redor. */
+  box-shadow:
+    0 20px 40px -18px color-mix(in srgb, var(--cor-primaria-escura) 60%, transparent),
+    0 6px 14px color-mix(in srgb, var(--cor-primaria-escura) 30%, transparent);
 }
 
 .card-saldo .rotulo {
@@ -413,6 +418,15 @@ body {
 .data-saldo {
   font-size: 12px;
   color: rgba(255, 255, 255, 0.75);
+
+  /* Linha pontilhada acima da data, como a perfuração de
+     destacamento de um recibo/talão — separa o valor principal
+     do "rodapé" do card, remetendo ao assunto do app (dinheiro,
+     comprovante) em vez de só decoração. */
+  display: block;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.3);
 }
 
 /* ================================================
@@ -773,10 +787,16 @@ html[data-tema="escuro"] .icone-categoria[data-cor="outros"] { background: #2E2B
 .skeleton-bloco {
   border-radius: 14px;
   margin-bottom: 16px;
+  /* Era var(--cor-fundo-pagina) — o branco FIXO da "mesa" fora do
+     celular (sempre #FFFFFF, não muda com o tema). Isso fazia um
+     clarão branco cru no tema escuro, porque no escuro as superfícies
+     já são escuras e não existe "branco" nenhum pra usar como ponto
+     claro. --cor-skeleton-brilho (branco translúcido, ver :root) sobe
+     o brilho na MESMA proporção não importa a cor de baixo. */
   background: linear-gradient(
     100deg,
     var(--cor-borda) 30%,
-    var(--cor-fundo-pagina) 50%,
+    var(--cor-skeleton-brilho) 50%,
     var(--cor-borda) 70%
   );
   background-size: 300% 100%;
@@ -1273,7 +1293,10 @@ html[data-tema="escuro"] .amostra-azul {
   align-items: center;
   gap: 12px;
   padding: 14px 16px;
-  border-bottom: 1px solid var(--cor-borda);
+  /* Pontilhado (não sólido) ecoa a mesma linha de "talão" do card
+     de saldo — um detalhe pequeno que amarra a lista de lançamentos
+     à ideia de extrato/comprovante em vez de uma lista genérica. */
+  border-bottom: 1px dashed var(--cor-borda);
   cursor: pointer;
   transition: background-color 0.15s ease;
 }
