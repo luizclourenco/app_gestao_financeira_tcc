@@ -1610,6 +1610,177 @@ function renderizarCategoriasGastos(categorias, lista) {
   });
 }
 
+/*
+  ================================================
+  PARTE 8.1 - BOLHAS DE CATEGORIA (visão geral por cima da lista)
+  ================================================
+
+  Um empacotamento de círculos "na mão", sem biblioteca: cada bolha
+  tem raio proporcional à RAIZ do valor gasto (não ao valor direto —
+  se fosse direto, uma categoria com o dobro do gasto pareceria com
+  4x mais ÁREA na tela, o que engana o olho. Com raiz quadrada, o
+  dobro do gasto vira o dobro da ÁREA, que é como a gente realmente
+  compara tamanhos de círculo).
+
+  O posicionamento usa a técnica clássica de "cadeia de frente": a
+  primeira bolha (maior) vai no centro, a segunda do lado dela, e
+  cada bolha seguinte é encostada (tangente) no par de bolhas já
+  colocadas mais próximo do centro, testando todos os pares até achar
+  uma posição que não esbarra em nenhuma outra bolha.
+*/
+
+// Dois pontos tangentes a dois círculos (c1, c2) para um terceiro
+// círculo de raio "raio" — geometria pura, sem depender de nada
+// específico do app (poderia estar em outro projeto sem adaptação).
+function pontosTangentesExternos(c1, c2, raio) {
+  const distancia = Math.hypot(c2.x - c1.x, c2.y - c1.y);
+  const r1 = c1.r + raio;
+  const r2 = c2.r + raio;
+  if (distancia === 0 || distancia > r1 + r2 || distancia < Math.abs(r1 - r2)) {
+    return []; // círculos longe demais ou um "dentro" do outro — sem tangente válida
+  }
+  const a = (r1 * r1 - r2 * r2 + distancia * distancia) / (2 * distancia);
+  const alturaQuadrado = r1 * r1 - a * a;
+  if (alturaQuadrado < 0) return [];
+  const altura = Math.sqrt(alturaQuadrado);
+  const meioX = c1.x + (a * (c2.x - c1.x)) / distancia;
+  const meioY = c1.y + (a * (c2.y - c1.y)) / distancia;
+  return [
+    { x: meioX + (altura * (c2.y - c1.y)) / distancia, y: meioY - (altura * (c2.x - c1.x)) / distancia },
+    { x: meioX - (altura * (c2.y - c1.y)) / distancia, y: meioY + (altura * (c2.x - c1.x)) / distancia },
+  ];
+}
+
+function colideComAlguma(ponto, raio, bolhasColocadas) {
+  return bolhasColocadas.some(
+    (bolha) => Math.hypot(bolha.x - ponto.x, bolha.y - ponto.y) < bolha.r + raio - 0.5,
+  );
+}
+
+function calcularLayoutBolhas(categorias) {
+  if (categorias.length === 0) return [];
+
+  const RAIO_MINIMO = 26;
+  const RAIO_MAXIMO = 72;
+  const valores = categorias.map((c) => c.total);
+  const maiorValor = Math.max(...valores);
+  const menorValor = Math.min(...valores);
+
+  const raioPara = (valor) => {
+    if (maiorValor === menorValor) return (RAIO_MINIMO + RAIO_MAXIMO) / 2;
+    const proporcao = (Math.sqrt(valor) - Math.sqrt(menorValor)) / (Math.sqrt(maiorValor) - Math.sqrt(menorValor));
+    return RAIO_MINIMO + proporcao * (RAIO_MAXIMO - RAIO_MINIMO);
+  };
+
+  // Maior primeiro — a "semente" do empacotamento fica no centro
+  const bolhas = categorias
+    .map((categoria) => ({ ...categoria, r: raioPara(categoria.total) }))
+    .sort((a, b) => b.r - a.r);
+
+  const colocadas = [];
+  bolhas.forEach((bolha, indice) => {
+    if (indice === 0) {
+      bolha.x = 0;
+      bolha.y = 0;
+    } else if (indice === 1) {
+      bolha.x = colocadas[0].r + bolha.r;
+      bolha.y = 0;
+    } else {
+      let melhorCandidato = null;
+      for (let a = 0; a < colocadas.length; a += 1) {
+        for (let b = a + 1; b < colocadas.length; b += 1) {
+          pontosTangentesExternos(colocadas[a], colocadas[b], bolha.r).forEach((ponto) => {
+            if (colideComAlguma(ponto, bolha.r, colocadas)) return;
+            const distanciaDoCentro = Math.hypot(ponto.x, ponto.y);
+            if (!melhorCandidato || distanciaDoCentro < melhorCandidato.distanciaDoCentro) {
+              melhorCandidato = { x: ponto.x, y: ponto.y, distanciaDoCentro };
+            }
+          });
+        }
+      }
+      if (melhorCandidato) {
+        bolha.x = melhorCandidato.x;
+        bolha.y = melhorCandidato.y;
+      } else {
+        // Nunca deveria cair aqui (só se a geometria falhar por
+        // arredondamento) — garante que sempre sobra uma posição,
+        // mesmo que não seja a mais compacta possível.
+        const ultima = colocadas[colocadas.length - 1];
+        bolha.x = ultima.x + ultima.r + bolha.r;
+        bolha.y = ultima.y;
+      }
+    }
+    colocadas.push(bolha);
+  });
+
+  return colocadas;
+}
+
+function renderizarBolhasCategorias(categorias, totalGastos) {
+  const container = document.getElementById('bolhas-categorias');
+  if (!container) return;
+
+  if (categorias.length === 0) {
+    container.replaceChildren();
+    container.classList.add('bolhas-categorias-vazia');
+    return;
+  }
+  container.classList.remove('bolhas-categorias-vazia');
+
+  const layout = calcularLayoutBolhas(categorias);
+  const margem = 6;
+  const minX = Math.min(...layout.map((b) => b.x - b.r)) - margem;
+  const maxX = Math.max(...layout.map((b) => b.x + b.r)) + margem;
+  const minY = Math.min(...layout.map((b) => b.y - b.r)) - margem;
+  const maxY = Math.max(...layout.map((b) => b.y + b.r)) + margem;
+
+  const svgNS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(svgNS, 'svg');
+  svg.setAttribute('viewBox', `${minX} ${minY} ${maxX - minX} ${maxY - minY}`);
+  svg.setAttribute('class', 'svg-bolhas-categorias');
+  svg.setAttribute('role', 'img');
+  svg.setAttribute(
+    'aria-label',
+    `Gastos por categoria: ${layout.map((b) => `${b.categoria}, ${formatarMoeda(b.total)}`).join('; ')}`,
+  );
+
+  layout.forEach((bolha) => {
+    const nomeCategoria = bolha.categoria;
+    const categoriaNormalizada = CATEGORIAS_DE_DESPESA.includes(nomeCategoria) ? nomeCategoria : 'Outros';
+    const cor = corPorCategoria[categoriaNormalizada] || 'outros';
+    const percentual = totalGastos > 0 ? Math.round((bolha.total / totalGastos) * 100) : 0;
+
+    const grupo = document.createElementNS(svgNS, 'g');
+    grupo.setAttribute('class', 'bolha-categoria');
+
+    const circulo = document.createElementNS(svgNS, 'circle');
+    circulo.setAttribute('cx', bolha.x);
+    circulo.setAttribute('cy', bolha.y);
+    circulo.setAttribute('r', bolha.r);
+    circulo.setAttribute('data-cor', cor);
+
+    const titulo = document.createElementNS(svgNS, 'title');
+    titulo.textContent = `${nomeCategoria}: ${formatarMoeda(bolha.total)} (${percentual}%)`;
+
+    grupo.append(circulo, titulo);
+
+    // Só escreve o rótulo dentro da bolha se ela for grande o
+    // suficiente pro texto caber sem espremer feio.
+    if (bolha.r >= 34) {
+      const percentualTexto = document.createElementNS(svgNS, 'text');
+      percentualTexto.setAttribute('x', bolha.x);
+      percentualTexto.setAttribute('y', bolha.y);
+      percentualTexto.setAttribute('class', 'bolha-categoria-percentual');
+      percentualTexto.textContent = `${percentual}%`;
+      grupo.append(percentualTexto);
+    }
+
+    svg.append(grupo);
+  });
+
+  container.replaceChildren(svg);
+}
+
 document.getElementById('link-ver-todas-categorias').addEventListener('click', (evento) => {
   evento.preventDefault(); // link <a> não deve navegar de verdade
 
@@ -2137,6 +2308,10 @@ async function carregarCategoriasBackend(
       categoriasDoMes,
       document.querySelector('.lista-categorias'),
     );
+    renderizarBolhasCategorias(
+      categoriasDoMes,
+      categoriasDoMes.reduce((total, categoria) => total + categoria.total, 0),
+    );
   } catch (erro) {
     console.error('Erro ao carregar gastos por categoria:', erro);
     mostrarToast('Não foi possível carregar os gastos por categoria.');
@@ -2477,6 +2652,7 @@ function limparDadosDaContaAtual() {
   desenharGraficoEvolucaoSaldo();
   categoriasDoMes = [];
   renderizarCategoriasGastos([], document.querySelector('.lista-categorias'));
+  renderizarBolhasCategorias([], 0);
 
   const estadoAntigo = { ...estadoFinanceiro };
   estadoFinanceiro = { receitas: 0, despesas: 0, saldo: 0 };
@@ -2954,43 +3130,15 @@ document.querySelectorAll('.botao-sair-trigger').forEach((botao) => {
 
 /*
   ================================================
-  PARTE 9.5 - ESQUEMA DE COR (vinho / azul)
+  PARTE 9.5 - IDENTIDADE DE COR
+
+  O app já teve dois esquemas de cor escolhíveis (vinho/azul) — foram
+  removidos em favor de uma identidade única e fixa (verde), definida
+  direto no style.css. Não existe mais nada pra "aplicar" aqui: só o
+  tema claro/escuro (PARTE 10, abaixo) continua sendo escolha da
+  pessoa.
   ================================================
-
-  Parecido com o tema claro/escuro, mas é um atributo DIFERENTE
-  (data-esquema) — os dois são independentes, então dá pra ter
-  "vinho escuro", "azul claro", etc. Existem botões seletores em
-  dois lugares (tela de login e card "Conta"), e os dois têm a
-  MESMA classe ".opcao-esquema", então um clique em QUALQUER um
-  dos dois funciona igual (e os dois conjuntos ficam sincronizados).
 */
-
-const CHAVE_ESQUEMA = 'meu-bolso:esquema-cor';
-
-function aplicarEsquema(esquema) {
-  document.documentElement.setAttribute('data-esquema', esquema);
-  localStorage.setItem(CHAVE_ESQUEMA, esquema);
-
-  // Marca visualmente qual botão está selecionado, nos DOIS lugares
-  // onde o seletor aparece (login e Conta) ao mesmo tempo.
-  document.querySelectorAll('.opcao-esquema').forEach((botao) => {
-    botao.classList.toggle('opcao-esquema-ativa', botao.getAttribute('data-esquema') === esquema);
-  });
-}
-
-// Ao carregar a página, usa o esquema salvo antes (se existir).
-// Se a pessoa nunca escolheu, começa no "vinho" por padrão.
-const esquemaSalvoAnteriormente = localStorage.getItem(CHAVE_ESQUEMA) || 'vinho';
-aplicarEsquema(esquemaSalvoAnteriormente);
-
-document.querySelectorAll('.opcao-esquema').forEach((botao) => {
-  botao.addEventListener('click', () => {
-    aplicarEsquema(botao.getAttribute('data-esquema'));
-    // O gráfico "fotografa" as cores do CSS no momento em que desenha,
-    // então precisa redesenhar pra pegar a cor nova do esquema.
-    desenharGraficoEvolucaoSaldo();
-  });
-});
 
 
 /*
