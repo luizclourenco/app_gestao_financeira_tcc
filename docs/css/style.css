@@ -3,20 +3,14 @@
    Deixamos as cores como "variáveis" (--nome) pra não
    ficar repetindo o código de cor em todo lugar.
 
-   Agora existem DOIS "eixos" independentes, controlados por dois
-   atributos na tag <html> (o JavaScript troca os dois):
-     - data-esquema="vinho" ou "azul"   → a IDENTIDADE de cor do app
-     - data-tema="claro" ou "escuro"    → claro/escuro, dentro de
-                                           qualquer esquema escolhido
-
-   Isso dá 4 combinações (vinho-claro, vinho-escuro, azul-claro,
-   azul-escuro), cada uma com seu próprio bloco de variáveis abaixo.
-   Só o dourado (metas), verde/vermelho (receita/despesa) e a fonte
-   continuam fixos — são cores "funcionais", não de identidade.
+   O app já teve dois esquemas de cor escolhíveis (vinho/azul,
+   via data-esquema). Foram removidos — agora existe uma identidade
+   ÚNICA e fixa (verde), com só UM eixo variável: data-tema
+   ("claro" ou "escuro"), ver bloco abaixo.
    ================================================ */
 :root {
-  /* Cores que NÃO mudam com o esquema escolhido (são "funcionais",
-     não fazem parte da identidade visual de cada tema) */
+  /* Cores que não mudam com o tema (são "funcionais", não fazem
+     parte da identidade visual) */
   --cor-acento: #C99A3E;           /* dourado — metas, conquistas, destaques especiais */
   --cor-acento-fundo: #F6ECD6;
   --cor-positiva: #2F9E6E;         /* verde - receitas */
@@ -24,9 +18,15 @@
   --cor-negativa: #B5473A;         /* terracota avermelhado - despesas */
   --cor-negativa-fundo: #F8E9E6;
   --cor-texto-inverso: #FFFFFF;    /* texto branco fixo, para usar em cima de fundo colorido */
+  /* Brilho do skeleton de carregamento: branco translúcido em vez de
+     uma cor sólida, pra sempre clarear o que tiver embaixo (borda,
+     fundo) pela MESMA proporção, em qualquer tema — sem precisar de
+     um valor por combinação. No escuro fica bem mais sutil (senão
+     vira um clarão), no claro mais forte. */
+  --cor-skeleton-brilho: rgba(255, 255, 255, 0.65);
   /* Fundo da "mesa" atrás do celular: sempre branco, não importa o
-     esquema (vinho/azul) nem o tema (claro/escuro) — é só o cenário
-     ao redor do aparelho, não faz parte da identidade visual do app */
+     tema (claro/escuro) — é só o cenário ao redor do aparelho, não
+     faz parte da identidade visual do app */
   --cor-fundo-pagina: #FFFFFF;
 
   --fonte-destaque: 'Fraunces', serif; /* usada só em números grandes e títulos — dá personalidade */
@@ -35,92 +35,38 @@
   --sombra-card: 0 1px 3px rgba(27, 36, 24, 0.07), 0 1px 2px rgba(27, 36, 24, 0.05);
 }
 
-/*
-  ESQUEMA "VINHO" (claro) — o padrão, usado se nenhum atributo
-  data-esquema ainda foi definido (primeiro acesso de alguém).
-  Remete a couro de carteira, por isso o nome do app "Meu Bolso".
-*/
-:root,
-html[data-esquema="vinho"] {
-  --cor-primaria: #7A3042;
-  --cor-primaria-escura: #4A1D28;  /* usado no gradiente do card de saldo */
-  --cor-primaria-clara: #F3E1E3;
-  --cor-texto: #231A1C;            /* preto levemente avinhado, não preto puro */
-  --cor-texto-suave: #786A6C;
-  /* Fundo com um tom de vinho de verdade, não um bege/cinza neutro
-     que poderia ser confundido com o esquema azul */
-  --cor-fundo: #F7EBEA;
-  --cor-branco: #FFF8F7;           /* branco levemente quente — fundo dos cards */
-  --cor-borda: #EBD9D7;
+/* IDENTIDADE (claro) — verde, remete a dinheiro/crescimento. É o
+   tema disponível pra quem prefere fundo claro; o padrão do app
+   continua sendo o escuro logo abaixo. */
+:root {
+  --cor-primaria: #1C8A54;
+  --cor-primaria-escura: #116138;  /* usado no gradiente do card de saldo */
+  --cor-primaria-clara: #DCF5E6;
+  --cor-texto: #16231C;            /* preto levemente esverdeado, não preto puro */
+  --cor-texto-suave: #5E7268;
+  --cor-fundo: #F0F8F3;
+  --cor-branco: #FBFEFC;           /* branco levemente verde — fundo dos cards */
+  --cor-borda: #DCEDE3;
 }
 
-/* ESQUEMA "VINHO" (escuro) */
-html[data-esquema="vinho"][data-tema="escuro"] {
-  --cor-primaria: #A6465A;
-  /* No modo claro, o gradiente do card de saldo vai de #7A3042 até
-     #4A1D28 (escurece). No escuro, antes, usava esse MESMO #4A1D28
-     como ponta escura — só que como o fundo já é escuro, o card
-     acabava parecendo "a mesma cor" nos dois temas. Agora a ponta
-     escura também muda: no escuro ela fica mais clara/viva (usa o
-     tom que era a cor "clara" no tema claro), então o card inteiro
-     fica visivelmente diferente entre claro e escuro. */
-  --cor-primaria-escura: #7A3042;
-  --cor-primaria-clara: #3A1E24;
-  --cor-texto: #F0EAE8;
-  --cor-texto-suave: #BBA4A8;
-  /* Fundo escuro puxado pro vinho/borgonha, não um cinza-marrom
-     neutro que ficaria parecido com o fundo escuro do esquema azul */
-  --cor-fundo: #200F14;
-  --cor-branco: #2E161C;
-  --cor-borda: #45232B;
-}
-
-/*
-  ESQUEMA "AZUL" (claro) — uma identidade bem diferente da vinho:
-  azul-marinho profundo (mais sóbrio que o azul genérico de app
-  corporativo) sobre um fundo frio neutro, em vez do bege quente.
-*/
-html[data-esquema="azul"] {
-  --cor-primaria: #2A4D7A;
-  --cor-primaria-escura: #152A47;
-  --cor-primaria-clara: #DCE6F2;
-  --cor-texto: #16212E;
-  --cor-texto-suave: #5A6B80;
-  /* Fundo com um tom de azul de verdade, não um cinza neutro que
-     poderia ser confundido com o esquema vinho */
-  --cor-fundo: #E7EFF9;
-  --cor-branco: #FAFCFF;
-  --cor-borda: #D3E0EF;
-}
-
-/* ESQUEMA "AZUL" (escuro) */
-html[data-esquema="azul"][data-tema="escuro"] {
-  --cor-primaria: #4D7AB8;
-  /* Mesma lógica do vinho escuro: a ponta escura do gradiente do
-     card de saldo usa o tom que era a cor "primária" no tema claro,
-     em vez de repetir o mesmo #152A47 escuro dos dois temas. */
-  --cor-primaria-escura: #2A4D7A;
-  --cor-primaria-clara: #1C2C3E;
-  --cor-texto: #EBEEF2;
-  --cor-texto-suave: #93A6BE;
-  /* Fundo escuro puxado pro azul-marinho, não um cinza/preto neutro
-     que ficaria parecido com o fundo escuro do esquema vinho */
-  --cor-fundo: #0A121F;
-  --cor-branco: #142A47;
-  --cor-borda: #223A57;
-}
-
-/*
-  O dourado/verde/vermelho também precisam de uma versão mais
-  escura de fundo no modo escuro (não dependem do esquema, só do
-  tema claro/escuro) — por isso ficam num bloco à parte, pelo
-  atributo data-tema sozinho.
-*/
+/* IDENTIDADE (escuro) — é o tema PADRÃO do app (ver PARTE 10 do
+   script.js). Fundo quase preto (só uma tintura verde), verde vivo
+   por cima pra parecer produto fintech de verdade, não "modo escuro
+   de navegador". */
 html[data-tema="escuro"] {
+  --cor-primaria: #2ED573;
+  --cor-primaria-escura: #1B7A4A;
+  --cor-primaria-clara: #132A1D;
+  --cor-texto: #EAF5EE;
+  --cor-texto-suave: #92A89C;
+  --cor-fundo: #070D0A;
+  --cor-branco: #101913;
+  --cor-borda: #1E2D24;
   --cor-acento: #D9AE5C;
   --cor-acento-fundo: #3A2F18;
   --cor-positiva-fundo: #163024;
   --cor-negativa-fundo: #3A1E18;
+  --cor-skeleton-brilho: rgba(255, 255, 255, 0.1);
 }
 
 /* Reset básico: tira margens e paddings padrão do navegador */
@@ -381,6 +327,14 @@ body {
 .card-saldo {
   background: linear-gradient(135deg, var(--cor-primaria), var(--cor-primaria-escura));
   color: var(--cor-texto-inverso);
+
+  /* Esse é o card mais importante da tela — em vez de repetir a
+     mesma sombra suave e genérica de todo card, ele ganha uma
+     elevação própria, tingida pela cor do esquema, pra pesar mais
+     visualmente que os cards secundários ao redor. */
+  box-shadow:
+    0 20px 40px -18px color-mix(in srgb, var(--cor-primaria-escura) 60%, transparent),
+    0 6px 14px color-mix(in srgb, var(--cor-primaria-escura) 30%, transparent);
 }
 
 .card-saldo .rotulo {
@@ -409,6 +363,15 @@ body {
 .data-saldo {
   font-size: 12px;
   color: rgba(255, 255, 255, 0.75);
+
+  /* Linha pontilhada acima da data, como a perfuração de
+     destacamento de um recibo/talão — separa o valor principal
+     do "rodapé" do card, remetendo ao assunto do app (dinheiro,
+     comprovante) em vez de só decoração. */
+  display: block;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.3);
 }
 
 /* ================================================
@@ -619,6 +582,93 @@ html[data-tema="escuro"] .icone-categoria[data-cor="outros"] { background: #2E2B
 .barra-progresso-preenchida[data-cor="outros"] { background: #9B9388; }
 .barra-progresso-preenchida[data-cor="meta"] { background: var(--cor-acento); }
 
+/* ================================================
+   BOLHAS DE CATEGORIA (visão geral acima da lista)
+   ================================================ */
+.bolhas-categorias {
+  margin-bottom: 18px;
+}
+
+.bolhas-categorias-vazia {
+  display: none;
+}
+
+.svg-bolhas-categorias {
+  width: 100%;
+  height: auto;
+  max-height: 220px;
+  display: block;
+  overflow: visible;
+}
+
+.bolha-categoria circle {
+  /* O traço na cor do card (não transparente) cria um "respiro"
+     entre bolhas encostadas — sem ele, duas bolhas tangentes se
+     fundem visualmente numa mancha só. */
+  stroke: var(--cor-branco);
+  stroke-width: 3;
+  transition: transform 0.15s ease;
+  transform-origin: center;
+  transform-box: fill-box;
+  cursor: default;
+}
+
+.bolha-categoria:hover circle {
+  transform: scale(1.04);
+}
+
+.bolha-categoria-percentual {
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  fill: var(--cor-texto-inverso);
+  text-anchor: middle;
+  dominant-baseline: central;
+  pointer-events: none;
+}
+
+circle[data-cor="moradia"] { fill: #BF6E4D; }
+circle[data-cor="alimentacao"] { fill: #D9A23B; }
+circle[data-cor="transporte"] { fill: #5B7A9D; }
+circle[data-cor="lazer"] { fill: #8C6BAE; }
+circle[data-cor="saude"] { fill: #3E9C8F; }
+circle[data-cor="outros"] { fill: #9B9388; }
+
+/* ================================================
+   PONTO "AO VIVO" DO GRÁFICO DE EVOLUÇÃO (hoje)
+   ================================================
+   Um anel que cresce e desaparece por trás do ponto de hoje, tipo
+   um "ping" de notificação — não é decoração solta: é motion que
+   responde a um dado real (o valor de hoje é diferente do resto,
+   então ele se comporta diferente). */
+.ponto-grafico-brilho {
+  transform-origin: center;
+  transform-box: fill-box;
+  animation: pulsar-ponto-grafico 2.2s ease-out infinite;
+}
+
+.ponto-grafico-atual {
+  filter: drop-shadow(0 0 4px var(--cor-primaria));
+}
+
+@keyframes pulsar-ponto-grafico {
+  0% {
+    transform: scale(1);
+    opacity: 0.55;
+  }
+  100% {
+    transform: scale(4.5);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ponto-grafico-brilho {
+    animation: none;
+    opacity: 0;
+  }
+}
+
 .info-categoria {
   flex: 1;
 }
@@ -769,10 +819,16 @@ html[data-tema="escuro"] .icone-categoria[data-cor="outros"] { background: #2E2B
 .skeleton-bloco {
   border-radius: 14px;
   margin-bottom: 16px;
+  /* Era var(--cor-fundo-pagina) — o branco FIXO da "mesa" fora do
+     celular (sempre #FFFFFF, não muda com o tema). Isso fazia um
+     clarão branco cru no tema escuro, porque no escuro as superfícies
+     já são escuras e não existe "branco" nenhum pra usar como ponto
+     claro. --cor-skeleton-brilho (branco translúcido, ver :root) sobe
+     o brilho na MESMA proporção não importa a cor de baixo. */
   background: linear-gradient(
     100deg,
     var(--cor-borda) 30%,
-    var(--cor-fundo-pagina) 50%,
+    var(--cor-skeleton-brilho) 50%,
     var(--cor-borda) 70%
   );
   background-size: 300% 100%;
@@ -927,67 +983,6 @@ html[data-privado="ativo"] .valor-sensivel {
 }
 
 /* Abas "Entrar" / "Criar conta" */
-/*
-  Seletor de esquema de cor: um grupo de botões circulares, cada um
-  mostrando uma prévia da cor daquele tema. O selecionado ganha um
-  anel ao redor (igual um "radio button" visual).
-*/
-.seletor-esquema {
-  display: flex;
-  justify-content: center;
-  gap: 14px;
-  margin-bottom: 20px;
-}
-
-.opcao-esquema {
-  background: none;
-  border: none;
-  padding: 3px;
-  border-radius: 50%;
-  cursor: pointer;
-  border: 2px solid transparent;
-  transition: border-color 0.15s ease, transform 0.15s ease;
-}
-
-.opcao-esquema:active {
-  transform: scale(0.92);
-}
-
-.opcao-esquema-ativa {
-  border-color: var(--cor-texto-suave);
-}
-
-.amostra-esquema {
-  display: block;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-}
-
-/* Cores fixas (não usam variável) — são a PRÉVIA de cada esquema,
-   então precisam mostrar a cor de verdade mesmo que esse esquema
-   não esteja ativo agora. Como o tom "primária" de cada esquema
-   muda entre claro/escuro (ver variáveis lá em cima), a prévia
-   também muda com html[data-tema="escuro"] — senão as duas bolinhas
-   ficam com a mesma cara independente do tema, e dá a impressão de
-   que claro e escuro são a "mesma cor". */
-.amostra-vinho {
-  background: linear-gradient(135deg, #7A3042, #4A1D28);
-}
-
-html[data-tema="escuro"] .amostra-vinho {
-  /* mesmo gradiente do card de saldo no modo escuro (ver --cor-primaria-escura) */
-  background: linear-gradient(135deg, #A6465A, #7A3042);
-}
-
-.amostra-azul {
-  background: linear-gradient(135deg, #2A4D7A, #152A47);
-}
-
-html[data-tema="escuro"] .amostra-azul {
-  background: linear-gradient(135deg, #4D7AB8, #2A4D7A);
-}
-
 .auth-abas {
   display: flex;
   gap: 8px;
@@ -1269,7 +1264,10 @@ html[data-tema="escuro"] .amostra-azul {
   align-items: center;
   gap: 12px;
   padding: 14px 16px;
-  border-bottom: 1px solid var(--cor-borda);
+  /* Pontilhado (não sólido) ecoa a mesma linha de "talão" do card
+     de saldo — um detalhe pequeno que amarra a lista de lançamentos
+     à ideia de extrato/comprovante em vez de uma lista genérica. */
+  border-bottom: 1px dashed var(--cor-borda);
   cursor: pointer;
   transition: background-color 0.15s ease;
 }

@@ -58,22 +58,6 @@
         <h1 class="auth-titulo">Meu Bolso</h1>
         <p class="auth-subtitulo">Controle financeiro simples e direto</p>
 
-        <!--
-          Seletor de esquema de cor. Cada botão troca a "identidade"
-          visual do app inteiro (data-esquema na tag <html>) — o
-          círculo colorido dentro de cada botão é só uma prévia
-          (não usa variável, porque é a cor de um esquema que talvez
-          nem esteja ativo no momento).
-        -->
-        <div class="seletor-esquema" role="group" aria-label="Escolha um tema de cor">
-          <button type="button" class="opcao-esquema" data-esquema="vinho" aria-label="Tema vinho">
-            <span class="amostra-esquema amostra-vinho"></span>
-          </button>
-          <button type="button" class="opcao-esquema" data-esquema="azul" aria-label="Tema azul">
-            <span class="amostra-esquema amostra-azul"></span>
-          </button>
-        </div>
-
         <div class="auth-abas">
           <button class="auth-aba auth-aba-ativa" data-formulario="form-login" type="button">Entrar</button>
           <button class="auth-aba" data-formulario="form-cadastro" type="button">Criar conta</button>
@@ -287,6 +271,11 @@
           <h2 class="card-titulo">Categorias (gastos)</h2>
           <a href="#" class="link-ver-todas" id="link-ver-todas-categorias">Ver todas</a>
         </div>
+
+        <!-- Visão geral em bolhas (tamanho = proporção do gasto). A lista
+             detalhada abaixo continua existindo pra quem quer o valor
+             exato de cada categoria — a bolha é o "de relance". -->
+        <div id="bolhas-categorias" class="bolhas-categorias"></div>
 
         <ul class="lista-categorias">
           <!-- Categorias de gastos fictícias antigas, mantidas como referência:
@@ -661,16 +650,6 @@
           </div>
           <button type="button" class="botao-icone botao-icone-pequeno" id="botao-editar-perfil" aria-label="Editar perfil">
             <i class="fa-solid fa-pen"></i>
-          </button>
-        </div>
-
-        <p class="rotulo" style="margin-bottom: 8px;">Tema de cor</p>
-        <div class="seletor-esquema" role="group" aria-label="Escolha um tema de cor" style="margin-bottom: 18px;">
-          <button type="button" class="opcao-esquema" data-esquema="vinho" aria-label="Tema vinho">
-            <span class="amostra-esquema amostra-vinho"></span>
-          </button>
-          <button type="button" class="opcao-esquema" data-esquema="azul" aria-label="Tema azul">
-            <span class="amostra-esquema amostra-azul"></span>
           </button>
         </div>
 
