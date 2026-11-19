@@ -5,7 +5,7 @@ import html
 import logging
 import os
 import secrets
-from contextlib import asynccontextmanager, closing
+from contextlib import asynccontextmanager
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Literal
@@ -20,7 +20,7 @@ from psycopg2 import IntegrityError
 from psycopg2.extras import Json, RealDictCursor
 import requests
 
-from database import get_db
+from database import close_db_pool, get_db
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +28,10 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     app.state.auth_secret = _obter_segredo_autenticacao()
-    yield
+    try:
+        yield
+    finally:
+        close_db_pool()
 
 
 app = FastAPI(lifespan=lifespan)
@@ -373,7 +376,7 @@ def _obter_categoria_id(cursor: RealDictCursor, nome: str, tipo: str) -> int:
 @app.post("/api/auth/cadastro")
 def cadastro(user: UsuarioAuth):
     try:
-        with closing(get_db()) as conn:
+        with get_db() as conn:
             with conn.cursor() as cursor:
                 cursor.execute(
                     "SELECT 1 FROM usuarios WHERE email = %s",
@@ -402,7 +405,7 @@ def cadastro(user: UsuarioAuth):
 
 @app.post("/api/auth/login")
 def login(user: UsuarioAuth):
-    with closing(get_db()) as conn:
+    with get_db() as conn:
         with conn.cursor() as cursor:
             cursor.execute(
                 "SELECT id, nome, email, senha_hash FROM usuarios WHERE email = %s",
@@ -421,7 +424,7 @@ def solicitar_recuperacao_senha(solicitacao: SolicitarRecuperacaoSenha):
     token = secrets.token_urlsafe(32)
     token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
 
-    with closing(get_db()) as conn:
+    with get_db() as conn:
         with conn.cursor() as cursor:
             _garantir_tabela_tokens_recuperacao(cursor)
             cursor.execute(
@@ -469,7 +472,7 @@ def solicitar_recuperacao_senha(solicitacao: SolicitarRecuperacaoSenha):
         logger.info("Enviando e-mail de recuperação pelo Brevo.")
         _enviar_email_recuperacao(str(solicitacao.email), token)
     except RuntimeError as erro:
-        with closing(get_db()) as conn:
+        with get_db() as conn:
             with conn.cursor() as cursor:
                 cursor.execute(
                     "DELETE FROM tokens_recuperacao_senha WHERE token_hash = %s",
@@ -482,7 +485,7 @@ def solicitar_recuperacao_senha(solicitacao: SolicitarRecuperacaoSenha):
             detail="Não foi possível enviar o e-mail de recuperação. Tente novamente mais tarde.",
         ) from None
 
-    with closing(get_db()) as conn:
+    with get_db() as conn:
         with conn.cursor() as cursor:
             cursor.execute(
                 """
@@ -504,7 +507,7 @@ def redefinir_senha(solicitacao: RedefinirSenha):
     token_hash = hashlib.sha256(solicitacao.token.encode("utf-8")).hexdigest()
     nova_senha_hash = hash_senha(solicitacao.senha)
 
-    with closing(get_db()) as conn:
+    with get_db() as conn:
         with conn.cursor() as cursor:
             _garantir_tabela_tokens_recuperacao(cursor)
             cursor.execute(
@@ -548,7 +551,7 @@ def atualizar_perfil(
     usuario_id: int = Depends(obter_usuario_autenticado),
 ):
     try:
-        with closing(get_db()) as conn:
+        with get_db() as conn:
             with conn.cursor() as cursor:
                 cursor.execute(
                     """
@@ -575,7 +578,7 @@ def atualizar_perfil(
 def obter_preferencias_usuario(
     usuario_id: int = Depends(obter_usuario_autenticado),
 ):
-    with closing(get_db()) as conn:
+    with get_db() as conn:
         with conn.cursor() as cursor:
             _garantir_tabela_preferencias_usuario(cursor)
             cursor.execute(
@@ -599,7 +602,7 @@ def salvar_preferencias_usuario(
     preferencias: PreferenciasUsuario,
     usuario_id: int = Depends(obter_usuario_autenticado),
 ):
-    with closing(get_db()) as conn:
+    with get_db() as conn:
         with conn.cursor() as cursor:
             _garantir_tabela_preferencias_usuario(cursor)
             cursor.execute(
@@ -618,7 +621,7 @@ def salvar_preferencias_usuario(
 
 @app.get("/api/transacoes/{usuario_id}")
 def listar_transacoes(usuario_id: int = Depends(exigir_usuario_da_rota)):
-    with closing(get_db()) as conn:
+    with get_db() as conn:
         with conn.cursor() as cursor:
             cursor.execute(
                 """
@@ -641,7 +644,7 @@ def criar_transacao(
     usuario_id: int = Depends(obter_usuario_autenticado),
 ):
     try:
-        with closing(get_db()) as conn:
+        with get_db() as conn:
             with conn.cursor() as cursor:
                 categoria_id = transacao.categoria_id
                 if transacao.categoria:
@@ -690,7 +693,7 @@ def atualizar_transacao(
         raise HTTPException(status_code=400, detail="Informe uma categoria válida.")
 
     try:
-        with closing(get_db()) as conn:
+        with get_db() as conn:
             with conn.cursor() as cursor:
                 categoria_id = _obter_categoria_id(
                     cursor, nome_categoria, transacao.tipo
@@ -730,7 +733,7 @@ def excluir_transacao(
     transacao_id: int = Path(gt=0),
     usuario_id: int = Depends(obter_usuario_autenticado),
 ):
-    with closing(get_db()) as conn:
+    with get_db() as conn:
         with conn.cursor() as cursor:
             cursor.execute(
                 "DELETE FROM transacoes WHERE id = %s AND usuario_id = %s RETURNING id",
@@ -760,7 +763,7 @@ def resumo_dashboard(
         else None
     )
 
-    with closing(get_db()) as conn:
+    with get_db() as conn:
         with conn.cursor() as cursor:
             consulta = """
                 SELECT
@@ -791,7 +794,7 @@ def resumo_dashboard(
 def relatorio_evolucao_saldo(
     usuario_id: int = Depends(exigir_usuario_da_rota),
 ):
-    with closing(get_db()) as conn:
+    with get_db() as conn:
         with conn.cursor() as cursor:
             cursor.execute(
                 """
@@ -851,7 +854,7 @@ def relatorio_mensal(
     inicio = date(ano, mes, 1)
     proximo_mes = (inicio.replace(day=28) + timedelta(days=4)).replace(day=1)
 
-    with closing(get_db()) as conn:
+    with get_db() as conn:
         with conn.cursor() as cursor:
             cursor.execute(
                 """
@@ -891,7 +894,7 @@ def relatorio_categorias(
     inicio = date(ano, mes, 1)
     proximo_mes = (inicio.replace(day=28) + timedelta(days=4)).replace(day=1)
 
-    with closing(get_db()) as conn:
+    with get_db() as conn:
         with conn.cursor() as cursor:
             cursor.execute(
                 """
@@ -917,7 +920,7 @@ def relatorio_categorias(
 
 @app.get("/api/relatorios/comparativos/{usuario_id}")
 def relatorio_comparativos(usuario_id: int = Depends(exigir_usuario_da_rota)):
-    with closing(get_db()) as conn:
+    with get_db() as conn:
         with conn.cursor() as cursor:
             cursor.execute(
                 """
