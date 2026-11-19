@@ -1054,6 +1054,59 @@ function gravarPreferenciasLocais(preferencias) {
   gravar(CHAVE_RECORRENTES, preferencias.recorrentes);
 }
 
+function metasLegadasPersonalizadas() {
+  const valorSalvo = localStorage.getItem(CHAVE_METAS);
+  if (valorSalvo === null) return null;
+
+  const metas = JSON.parse(valorSalvo);
+  if (!Array.isArray(metas)) {
+    throw new Error('Os dados antigos das metas estão em formato inválido.');
+  }
+
+  const metasDeExemplo = [
+    { id: 1, nome: 'Reserva de Emergência', meta: 10000, atual: 6000, icone: 'fa-piggy-bank' },
+    { id: 2, nome: 'Viagem para a praia', meta: 3000, atual: 900, icone: 'fa-umbrella-beach' },
+    { id: 3, nome: 'Notebook novo', meta: 5000, atual: 4000, icone: 'fa-laptop' },
+  ];
+  const saoExemplosInalterados = metas.length === metasDeExemplo.length
+    && metas.every((meta, indice) => meta
+      && meta.id === metasDeExemplo[indice].id
+      && meta.nome === metasDeExemplo[indice].nome
+      && meta.meta === metasDeExemplo[indice].meta
+      && meta.atual === metasDeExemplo[indice].atual
+      && meta.icone === metasDeExemplo[indice].icone);
+
+  return metas.length > 0 && !saoExemplosInalterados ? metas : null;
+}
+
+function migrarPreferenciasLegadasParaUsuario() {
+  const chaves = [
+    CHAVE_CATEGORIAS,
+    CHAVE_LIMITES_CATEGORIA,
+    CHAVE_ORCAMENTO_MENSAL,
+    CHAVE_METAS,
+    CHAVE_RECORRENTES,
+  ];
+
+  chaves.forEach((chave) => {
+    const valorLegado = localStorage.getItem(chave);
+    const chaveDaConta = chaveDeDadosDoUsuario(chave);
+    if (valorLegado === null || localStorage.getItem(chaveDaConta) !== null) return;
+    if (chave === CHAVE_METAS && metasLegadasPersonalizadas() === null) return;
+    localStorage.setItem(chaveDaConta, valorLegado);
+  });
+}
+
+function removerPreferenciasLegadas() {
+  [
+    CHAVE_CATEGORIAS,
+    CHAVE_LIMITES_CATEGORIA,
+    CHAVE_ORCAMENTO_MENSAL,
+    CHAVE_METAS,
+    CHAVE_RECORRENTES,
+  ].forEach((chave) => localStorage.removeItem(chave));
+}
+
 async function sincronizarPreferenciasBackend() {
   if (usuarioIdAtual === null || !tokenAcessoAtual) return;
 
@@ -1082,15 +1135,22 @@ async function carregarPreferenciasBackend() {
   );
 
   if (preferencias.configurado) {
+    const metasLegadas = preferencias.metas.length === 0
+      ? metasLegadasPersonalizadas()
+      : null;
+    if (metasLegadas) {
+      preferencias.metas = metasLegadas;
+      const respostaSalvar = await fetch(`${API_BASE_URL}/preferencias`, {
+        method: 'PUT',
+        headers: cabecalhosAutenticados({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify(preferencias),
+      });
+      await lerRespostaApi(respostaSalvar, 'Não foi possível recuperar suas metas antigas.');
+      localStorage.removeItem(CHAVE_METAS);
+    }
     gravarPreferenciasLocais(preferencias);
   } else {
-    const categoriasLegadas = JSON.parse(localStorage.getItem(CHAVE_CATEGORIAS) || 'null');
-    if (categoriasLegadas?.length) {
-      localStorage.setItem(
-        chaveDeDadosDoUsuario(CHAVE_CATEGORIAS),
-        JSON.stringify(categoriasLegadas),
-      );
-    }
+    migrarPreferenciasLegadasParaUsuario();
     const dados = dadosPreferenciasLocais();
     const respostaSalvar = await fetch(`${API_BASE_URL}/preferencias`, {
       method: 'PUT',
@@ -1099,6 +1159,7 @@ async function carregarPreferenciasBackend() {
     });
     await lerRespostaApi(respostaSalvar, 'Não foi possível migrar suas configurações.');
     gravarPreferenciasLocais(dados);
+    removerPreferenciasLegadas();
   }
 
   recalcularCategorias();
@@ -1208,7 +1269,7 @@ function htmlFormularioNovoLancamento() {
         <label>Tipo</label>
         <div class="grupo-tipo">
           <label class="opcao-tipo">
-            <input type="radio" name="tipo" value="despesa" checked> Despesa
+            <input type="radio" name="tipo" value="despesa"> Despesa
           </label>
           <label class="opcao-tipo">
             <input type="radio" name="tipo" value="receita"> Receita
@@ -1264,7 +1325,13 @@ document.getElementById('botao-novo-lancamento').addEventListener('click', () =>
     evento.preventDefault(); // impede a página de recarregar (comportamento padrão de forms)
     limparErrosDoFormulario(evento.target);
 
-    const tipoEscolhido = document.querySelector('input[name="tipo"]:checked').value;
+    const tipoSelecionado = document.querySelector('input[name="tipo"]:checked');
+    if (!tipoSelecionado) {
+      mostrarToast('Selecione se o lançamento é receita ou despesa.');
+      return;
+    }
+
+    const tipoEscolhido = tipoSelecionado.value;
     const descricao = campoNovoDescricao.value.trim();
     const categoria = tipoEscolhido === 'receita' ? 'Receita' : document.getElementById('campo-categoria').value;
     const valor = parseFloat(campoNovoValor.value);
